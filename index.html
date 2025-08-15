@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="bn">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>JobGate</title>
+    <link rel="stylesheet" href="index.css" />
+    <!-- Iconify -->
+    <script src="https://code.iconify.design/iconify-icon/2.1.0/iconify-icon.min.js"></script>
+  </head>
+  <body>
+    <!-- Top: only logo image (left, large, professional spacing) -->
+    <header class="topbar">
+      <div class="topbar__inner">
+        <img src="./JobGate_logo.png" alt="JobGate" class="logo-only" />
+      </div>
+    </header>
+
+    <main class="container hero">
+      <!-- Left column -->
+      <section class="left">
+        <img src="./Human_Figure.png" alt="Graduate" class="figure" />
+
+        <h1 class="title">Welcome To JobGate</h1>
+        <p class="sub">Get tested, get trained, and apply with confidence.</p>
+        <p class="hint">
+          <strong>Please log or register to get started.</strong>
+        </p>
+
+        <a href="auth/register.php" class="btn-primary">Register now</a>
+      </section>
+
+      <!-- Right column -->
+      <aside class="card">
+        <h2 class="card-title">Find Your New Job</h2>
+        <p class="card-sub">Search for your next career opportunity</p>
+
+        <!-- centered logo inside card (bigger) -->
+        <div class="card-logo">
+          <img src="./JobGate_logo.png" alt="JobGate" />
+        </div>
+
+        <!-- three features (animated icons) -->
+        <div class="features">
+          <!-- Featured Jobs -->
+          <div class="feature">
+            <div class="icon circle icon-float">
+              <iconify-icon
+                icon="line-md:megaphone-loop"
+                width="30"
+                height="30"
+              ></iconify-icon>
+            </div>
+            <div>
+              <h3>Featured Jobs</h3>
+              <p>
+                Explore a selection of our latest and most popular job listings.
+              </p>
+            </div>
+          </div>
+
+          <!-- Our Services -->
+          <div class="feature">
+            <div class="icon circle icon-float delay-1">
+              <iconify-icon
+                icon="line-md:cog-loop"
+                width="30"
+                height="30"
+              ></iconify-icon>
+            </div>
+            <div>
+              <h3>Our Services</h3>
+              <p>
+                We provide job match, resume reviews, and career advice to aid
+                your job search.
+              </p>
+            </div>
+          </div>
+
+          <!-- Why Choose Us -->
+          <div class="feature">
+            <div class="icon circle icon-float delay-2">
+              <iconify-icon
+                icon="line-md:confirm-circle-to-check-transition"
+                width="30"
+                height="30"
+              ></iconify-icon>
+            </div>
+            <div>
+              <h3>Why Choose Us</h3>
+              <p>
+                Benefit from our extensive network, expertise, and personalized
+                support.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- bullet list (subtle animated icons) -->
+        <div class="list">
+          <div class="list-row">
+            <div class="icon small icon-pulse">
+              <iconify-icon
+                icon="line-md:cog"
+                width="22"
+                height="22"
+              ></iconify-icon>
+            </div>
+            <div>
+              <h4>Services</h4>
+              <p>Custom description for Our Services</p>
+            </div>
+          </div>
+
+          <div class="list-row">
+            <div class="icon small icon-pulse delay-1">
+              <iconify-icon
+                icon="mdi:account-star-outline"
+                width="22"
+                height="22"
+              ></iconify-icon>
+            </div>
+            <div>
+              <h4>Benefit for Job Seekers</h4>
+              <p>Custom description for Benefit for Job Seekers</p>
+            </div>
+          </div>
+
+          <div class="list-row">
+            <div class="icon small icon-pulse delay-2">
+              <iconify-icon
+                icon="line-md:briefcase"
+                width="22"
+                height="22"
+              ></iconify-icon>
+            </div>
+            <div>
+              <h4>Benefit for Employees</h4>
+              <p>Custom description for Benefit for Employees</p>
+            </div>
+          </div>
+        </div>
+      </aside>
+    </main>
+
+    <script>
+      // Fallback: যদি কোনো animated icon লোড না হয়, স্টেবল বিকল্প সেট করুন
+      window.addEventListener("load", () => {
+        const tryReplace = (el, primary, fallback) => {
+          // Iconify রেন্ডার করলে <svg> ইনজেক্ট হয়; 500ms পরে না হলে fallback
+          setTimeout(() => {
+            if (!el.shadowRoot && !el.querySelector("svg")) {
+              el.setAttribute("icon", fallback);
+            }
+          }, 500);
+        };
+        document.querySelectorAll("iconify-icon").forEach((el) => {
+          const icon = el.getAttribute("icon") || "";
+          if (icon === "line-md:megaphone-loop")
+            tryReplace(el, icon, "mdi:bullhorn-outline");
+          if (icon === "line-md:confirm-circle-to-check-transition")
+            tryReplace(el, icon, "mdi:check-circle-outline");
+        });
+      });
+    </script>
+  </body>
+</html>
