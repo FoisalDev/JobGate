@@ -1,105 +1,143 @@
 <!DOCTYPE html>
 <html lang="bn">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>JobGate — Sign Up</title>
-  <link rel="stylesheet" href="signup.css" />
-  <script src="https://code.iconify.design/iconify-icon/2.1.0/iconify-icon.min.js"></script>
-</head>
-<body>
-  <!-- Top-left logo (index-এর মতো) -->
-  <header class="topbar">
-    <img src="./JobGate_logo.png" alt="JobGate" class="logo-only" />
-  </header>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>JobGate — Sign Up</title>
+    <link rel="stylesheet" href="signup.css" />
+    <script src="https://code.iconify.design/iconify-icon/2.1.0/iconify-icon.min.js"></script>
+  </head>
+  <body>
+    <!-- Top-left logo (same as index) -->
+    <header class="topbar">
+      <img src="./JobGate_logo.png" alt="JobGate" class="logo-only" />
+    </header>
 
-  <main class="container hero">
-    <!-- Left (index-এর মতো একই কনটেন্ট ব্লক) -->
-    <section class="left">
-      <img src="./Human_Figure.png" alt="Graduate" class="figure" />
-      <h1 class="title">Welcome To JobGate</h1>
-      <p class="sub">Get tested, get trained, and apply with confidence.</p>
-      <p class="hint"><strong>Please log or register to get started.</strong></p>
-    </section>
+    <main class="container hero">
+      <!-- Left section (keep same look as index) -->
+      <section class="left">
+        <img src="./Human_Figure.png" alt="Graduate" class="figure" />
 
-    <!-- Right: Sign Up card -->
-    <aside class="card">
-      <h2 class="card-title">Sign Up</h2>
+        <h1 class="title">Welcome To<br />JobGate</h1>
+        <p class="sub">Get tested, get trained, and apply with confidence.</p>
+        <p class="hint">
+          <strong>Please log or register to get started.</strong>
+        </p>
+      </section>
 
-      <form class="form" action="#" method="post" onsubmit="return false;">
-        <!-- Name -->
-        <label class="field">
-          <div class="input-wrap">
-            <input type="text" name="name" placeholder="Name" required />
-          </div>
-        </label>
+      <!-- Right section: BIG signup card -->
+      <aside class="card">
+        <h2 class="card-title">Sign Up</h2>
+        <p class="card-sub">Create your JobGate account</p>
 
-        <!-- Email -->
-        <label class="field">
-          <div class="input-wrap">
-            <input type="email" name="email" placeholder="Email" required />
-          </div>
-        </label>
+        <form class="form" action="#" method="post" onsubmit="return false;">
+          <!-- Name -->
+          <label class="field">
+            <div class="input-wrap">
+              <input type="text" name="name" placeholder="Name" required />
+            </div>
+          </label>
 
-        <!-- User Type -->
-        <label class="field">
-          <div class="input-wrap select">
-            <select name="user_type" required>
-              <option value="" hidden>Select User Type</option>
-              <option value="applicant">Applicant</option>
-              <option value="recruiter">Recruiter</option>
-            </select>
-            <iconify-icon icon="mdi:chevron-down" class="chev"></iconify-icon>
-          </div>
-        </label>
+          <!-- Email -->
+          <label class="field">
+            <div class="input-wrap">
+              <input type="email" name="email" placeholder="Email" required />
+            </div>
+          </label>
 
-        <!-- Country (3 options only) -->
-        <label class="field">
-          <div class="input-wrap select">
-            <select name="country" required>
-              <option value="" hidden>Country</option>
-              <option>Bangladesh</option>
-              <option>India</option>
-              <option>United States</option>
-            </select>
-            <iconify-icon icon="mdi:chevron-down" class="chev"></iconify-icon>
-          </div>
-        </label>
+          <!-- User Type -->
+          <label class="field">
+            <div class="input-wrap select">
+              <select name="user_type" required>
+                <option value="" hidden>Select User Type</option>
+                <option value="applicant">Applicant</option>
+                <option value="recruiter">Recruiter</option>
+              </select>
+              <iconify-icon icon="mdi:chevron-down" class="chev"></iconify-icon>
+            </div>
+          </label>
 
-        <!-- Password -->
-        <label class="field">
-          <div class="input-wrap">
-            <input type="password" id="pwd" name="password" placeholder="Password" required />
-            <button type="button" class="eye" aria-label="Toggle password" onclick="togglePwd('pwd','eye1')">
-              <iconify-icon id="eye1" icon="mdi:eye-off-outline"></iconify-icon>
-            </button>
-          </div>
-        </label>
+          <!-- Country (only 3 options for now) -->
+          <label class="field">
+            <div class="input-wrap select">
+              <select name="country" required>
+                <option value="" hidden>Country</option>
+                <option>Bangladesh</option>
+                <option>India</option>
+                <option>United States</option>
+              </select>
+              <iconify-icon icon="mdi:chevron-down" class="chev"></iconify-icon>
+            </div>
+          </label>
 
-        <!-- Confirm Password -->
-        <label class="field">
-          <div class="input-wrap">
-            <input type="password" id="cpwd" name="confirm_password" placeholder="Confirm Password" required />
-            <button type="button" class="eye" aria-label="Toggle confirm password" onclick="togglePwd('cpwd','eye2')">
-              <iconify-icon id="eye2" icon="mdi:eye-off-outline"></iconify-icon>
-            </button>
-          </div>
-        </label>
+          <!-- Password -->
+          <label class="field">
+            <div class="input-wrap">
+              <input
+                type="password"
+                id="pwd"
+                name="password"
+                placeholder="Password"
+                required
+              />
+              <button
+                type="button"
+                class="eye"
+                aria-label="Toggle password"
+                onclick="togglePwd('pwd','eye1')"
+              >
+                <iconify-icon
+                  id="eye1"
+                  icon="mdi:eye-off-outline"
+                ></iconify-icon>
+              </button>
+            </div>
+          </label>
 
-        <!-- Submit -->
-        <button class="btn-primary" type="submit">Sign Up</button>
-        <p class="alt">Already have an account? <a href="auth/login.php">Login</a></p>
-      </form>
-    </aside>
-  </main>
+          <!-- Confirm Password -->
+          <label class="field">
+            <div class="input-wrap">
+              <input
+                type="password"
+                id="cpwd"
+                name="confirm_password"
+                placeholder="Confirm Password"
+                required
+              />
+              <button
+                type="button"
+                class="eye"
+                aria-label="Toggle confirm password"
+                onclick="togglePwd('cpwd','eye2')"
+              >
+                <iconify-icon
+                  id="eye2"
+                  icon="mdi:eye-off-outline"
+                ></iconify-icon>
+              </button>
+            </div>
+          </label>
 
-  <script>
-    function togglePwd(inputId, iconId){
-      const inp = document.getElementById(inputId);
-      const ico = document.getElementById(iconId);
-      if (inp.type === 'password'){ inp.type = 'text'; ico.setAttribute('icon','mdi:eye-outline'); }
-      else { inp.type = 'password'; ico.setAttribute('icon','mdi:eye-off-outline'); }
-    }
-  </script>
-</body>
+          <button class="btn-primary" type="submit">Sign Up</button>
+          <p class="alt">
+            Already have an account? <a href="auth/login.php">Login</a>
+          </p>
+        </form>
+      </aside>
+    </main>
+
+    <script>
+      function togglePwd(inputId, iconId) {
+        const inp = document.getElementById(inputId);
+        const ico = document.getElementById(iconId);
+        if (inp.type === "password") {
+          inp.type = "text";
+          ico.setAttribute("icon", "mdi:eye-outline");
+        } else {
+          inp.type = "password";
+          ico.setAttribute("icon", "mdi:eye-off-outline");
+        }
+      }
+    </script>
+  </body>
 </html>

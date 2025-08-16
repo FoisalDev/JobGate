@@ -1,133 +1,122 @@
-/* ===== Base ===== */
+/* ===== Base (match index) ===== */
 * { box-sizing: border-box; }
 html, body {
   margin: 0; padding: 0;
   background: #fff; color: #0f172a;
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+  font-size: 20px; /* same base size as index */
 }
 img { max-width: 100%; display: block; }
-.container { width: min(1180px, 92%); margin: 0 auto; }
+.container { width: min(1380px, 96%); margin: 0 auto; }
 
-/* ===== Top-left logo (bigger) ===== */
-.topbar { padding: 14px 0 8px; }
+/* ===== Top-left logo (same as index) ===== */
+.topbar { padding: 18px 0 12px; }
 .logo-only{
-  height: 160px;                    /* BIG logo */
-  width: auto; object-fit: contain;
-  margin-left: 16px; opacity: .98;
+  height: 250px; width: auto; object-fit: contain;
+  margin-left: 20px; opacity: .98;
 }
 
-/* ===== Layout (center vertically + more gap under logo) ===== */
+/* ===== Layout (same grid + big gap like index) ===== */
 .hero{
   display: grid;
-  grid-template-columns: 1.05fr 1fr;
-  gap: 64px;
-  align-items: center;               /* middle vertically */
-  padding: 48px 0 80px;              /* extra top space under logo */
-  min-height: calc(100vh - 200px);   /* keep content centered on laptop screens */
+  grid-template-columns: 0.8fr 1.2fr; /* left a bit narrower, right wider */
+  gap: 620px;                         /* large horizontal gap */
+  align-items: start;
+  margin-top: 35px;                   /* gap under logo */
 }
-@media (max-width: 980px){
-  .hero{ grid-template-columns: 1fr; gap: 32px; min-height: auto; padding: 32px 0 60px; }
+@media (max-width: 1100px){
+  .hero{ grid-template-columns: 1fr; gap: 64px; margin-top: 64px; }
 }
 
-/* ===== Left column (scaled up) ===== */
-.left{ padding-left: 6px; }
+/* ===== Left column (identical scale to index) ===== */
+.left{ margin-left: -200px; }         /* nudge left like index */
 .figure{
-  width: 340px;                      /* bigger illustration */
-  border-radius: 8px;
-  box-shadow: 0 12px 28px rgba(0,0,0,.10);
-  margin: 12px 0 26px;
+  width: 500px; border-radius: 16px;
+  box-shadow: 0 18px 36px rgba(0,0,0,.12);
+  margin: 20px 0 40px;
 }
 .title{
-  font-size: 48px; line-height: 1.08; font-weight: 800;
-  margin: 10px 0 12px;
+  font-size: 80px; line-height: 1.08; font-weight: 800;
+  margin: 20px 0 20px;
 }
-.sub{ margin: 0 0 8px; color:#334155; font-size: 18px; }
-.hint{ margin: 12px 0 32px; font-size: 20px; }
+.sub{ margin: 0 0 16px; color:#334155; font-size: 26px; }
+.hint{ margin: 16px 0 40px; font-size: 26px; }
 
-/* ===== Right card ===== */
+/* ===== Right card (BIG) ===== */
 .card{
-  background:#fff;
-  border-radius: 18px;
-  padding: 36px 36px 26px;           /* a bit roomier */
-  box-shadow: 0 28px 60px rgba(2,6,23,.18);
-  border: 1px solid rgba(15,23,42,.08);
+  justify-self: end;
+  width: 800px; max-width: 100%;
+  background:#fff; border-radius: 28px;
+  padding: 64px 64px 48px;
+  border:1px solid rgba(15,23,42,.10);
+  box-shadow: 0 48px 100px rgba(2,6,23,.20);
 }
 .card-title{
-  font-size: 40px; font-weight: 800; text-align: center;
-  margin: 6px 0 18px;
+  font-size: 74px; font-weight: 800; margin: 8px 0 12px; text-align: center;
+}
+.card-sub{
+  color:#475569; margin: 0 0 36px; font-size: 32px; text-align: center;
 }
 
-/* ===== Form fields ===== */
-.form{ display: grid; gap: 16px; }
+/* ===== Form (large fields) ===== */
+.form{ display: grid; gap: 24px; }
 .field{ display:block; }
 
 .input-wrap{
   position: relative; background:#fff;
-  border:1px solid #e5e7eb; border-radius:12px;
+  border: 1.6px solid #e5e7eb; border-radius: 16px;
   box-shadow: inset 0 1px 0 rgba(0,0,0,.02);
 }
-
-/* make inputs bigger & ALWAYS white (fix blue bars/autofill) */
 .input-wrap input,
 .input-wrap select{
   width:100%; border:0; outline:none; background:#fff !important;
-  height: 56px; line-height:56px;
-  padding:0 48px 0 16px;
-  font-size:16px; color:#0f172a;
+  height: 68px; line-height: 68px;
+  padding: 0 64px 0 20px;
+  font-size: 26px; color:#0f172a;
   -webkit-appearance: none; appearance: none;
 }
 .input-wrap input::placeholder{ color:#9ca3af; }
+.input-wrap:focus-within{
+  border-color:#3b82f6; box-shadow: 0 0 0 5px rgba(59,130,246,.12);
+}
 
-/* Autofill override (Safari/Chrome) */
+/* Select chevron */
+.input-wrap.select .chev{
+  position:absolute; right:18px; top:50%;
+  transform: translateY(-50%); color:#64748b; font-size:28px; pointer-events:none;
+}
+
+/* Password eye buttons */
+.eye{
+  position:absolute; right:12px; top:50%;
+  transform: translateY(-50%);
+  width: 44px; height: 44px;
+  border:0; background:transparent; cursor:pointer; color:#64748b; font-size:26px;
+}
+
+/* Button (big, same vibe as index) */
+.btn-primary{
+  margin-top: 8px;
+  display:inline-block; background:#3b82f6; color:#fff; text-decoration:none;
+  font-weight:800; font-size: 26px;
+  padding: 24px 60px; border-radius: 18px; border:0; cursor:pointer;
+  box-shadow: 0 20px 40px rgba(59,130,246,.32);
+  transition: transform .08s ease, box-shadow .2s ease, background .2s ease;
+}
+.btn-primary:hover{ transform: translateY(-3px); box-shadow: 0 26px 48px rgba(59,130,246,.34); }
+
+.alt{
+  text-align:center; margin: 18px 0 0; color:#0f172a; font-weight:700; font-size: 22px;
+}
+.alt a{ color:#2563eb; text-decoration:none; }
+
+/* ===== Icon color (if you add icons later) ===== */
+iconify-icon{ color:#64748b; }
+
+/* ===== Autofill fix (Safari/Chrome) ===== */
 .input-wrap input:-webkit-autofill,
 .input-wrap select:-webkit-autofill{
   -webkit-box-shadow: 0 0 0 1000px #fff inset !important;
   -webkit-text-fill-color: #0f172a !important;
   caret-color: #0f172a !important;
 }
-
-/* focus ring */
-.input-wrap:focus-within{
-  border-color:#cbd5e1;
-  box-shadow: 0 0 0 4px rgba(59,130,246,.10);
-}
-
-/* Select chevron */
-.input-wrap.select select{
-  cursor:pointer;
-  background:#fff !important;
-}
-.input-wrap .chev{
-  position:absolute; right:14px; top:50%;
-  transform:translateY(-50%); color:#64748b; pointer-events:none; font-size:20px;
-}
-
-/* Password eye buttons */
-.eye{
-  position:absolute; right:10px; top:50%;
-  transform:translateY(-50%);
-  width:38px; height:38px; border:0; background:transparent; cursor:pointer;
-  color:#64748b;
-}
-
-/* ===== Primary button (big & centered) ===== */
-.btn-primary{
-  margin: 16px auto 0;
-  display:inline-block;
-  background:#3b82f6; color:#fff; text-decoration:none;
-  font-weight:800; border:0; cursor:pointer;
-  padding: 18px 42px;                /* larger button */
-  border-radius:12px;
-  box-shadow:0 16px 32px rgba(59,130,246,.28);
-  transition: transform .08s ease, box-shadow .2s ease, background .2s ease;
-}
-.btn-primary:hover{ transform: translateY(-1px); box-shadow:0 20px 36px rgba(59,130,246,.30); background:#2563eb; }
-
-.alt{
-  text-align:center; margin:16px 0 0;
-  color:#0f172a; font-weight:700; font-size:15px;
-}
-.alt a{ color:#2563eb; text-decoration:none; }
-
-/* Icon color (if used) */
-iconify-icon{ color:#64748b; }
