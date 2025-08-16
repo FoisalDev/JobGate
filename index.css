@@ -36,10 +36,10 @@ img {
 /* ===== Hero layout (left image, big right card, large gap) ===== */
 .hero {
   display: grid;
-  grid-template-columns: 0.5fr 1fr;
+  grid-template-columns: 0.8fr 1.2fr;
   gap: 620px; /* large horizontal gap */
   align-items: start;
-  margin-top: 25px; /* bigger top spacing */
+  margin-top: 35px; /* bigger top spacing */
 }
 @media (max-width: 1100px) {
   .hero {
@@ -51,9 +51,9 @@ img {
 
 /* ===== Left column (hero image & copy) ===== */
 .left {
-  padding-left: 10px;
-  justify-self: start;
+  margin-left: -200px; /* adjust value until looks good */
 }
+
 .figure {
   width: 500px; /* much larger illustration */
   border-radius: 16px;
@@ -95,7 +95,7 @@ img {
 /* ===== Right card (MUCH BIGGER, right-aligned) ===== */
 .card {
   justify-self: end;
-  width: 1020px; /* wider card */
+  width: 1250px; /* wider card */
   max-width: 100%;
   background: #fff;
   border-radius: 28px;
@@ -104,14 +104,14 @@ img {
   box-shadow: 0 48px 100px rgba(2, 6, 23, 0.2);
 }
 .card-title {
-  font-size: 68px;
+  font-size: 74px;
   font-weight: 800;
   margin: 8px 0 16px;
 }
 .card-sub {
   color: #475569;
   margin: 0 0 36px;
-  font-size: 26px;
+  font-size: 32px;
 }
 .card-logo {
   display: flex;
@@ -121,7 +121,7 @@ img {
   margin: 20px 0 24px;
 }
 .card-logo img {
-  height: 260px;
+  height: 250px;
   width: auto;
   opacity: 0.98;
 }
@@ -130,7 +130,7 @@ img {
 .features {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 40px;
+  gap: 50px;
   margin: 28px 0 32px;
 }
 @media (max-width: 1100px) {
@@ -155,19 +155,19 @@ img {
 }
 .feature h3 {
   margin: 0 0 10px;
-  font-size: 28px;
+  font-size: 38px;
   font-weight: 800;
 }
 .feature p {
   margin: 0;
   color: #475569;
-  font-size: 20px;
+  font-size: 23px;
   line-height: 1.75;
 }
 
 /* ===== Bullet list (larger) ===== */
 .list {
-  margin-top: 24px;
+  margin-top: 32px;
   display: grid;
   gap: 22px;
 }
