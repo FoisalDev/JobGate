@@ -10,67 +10,70 @@ body {
   color: #0f172a;
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto,
     Helvetica, Arial;
+  font-size: 20px; /* base font-size bigger */
 }
 img {
   max-width: 100%;
   display: block;
 }
 .container {
-  width: min(1180px, 92%);
+  width: min(1380px, 96%);
   margin: 0 auto;
 }
 
-/* ===== Top-left logo (flush) ===== */
+/* ===== Top-left logo ===== */
 .topbar {
-  padding: 10px 0 6px; /* tight top spacing */
+  padding: 18px 0 12px;
 }
 .logo-only {
-  height: 120px; /* BIG header logo */
+  height: 250px;
   width: auto;
   object-fit: contain;
-  margin-left: 16px; /* push from very edge a bit for pro look */
+  margin-left: 20px;
   opacity: 0.98;
 }
 
-/* ===== Layout ===== */
+/* ===== Hero layout (left image, big right card, large gap) ===== */
 .hero {
   display: grid;
-  grid-template-columns: 1.05fr 1fr;
-  gap: 64px;
-  align-items: flex-start;
-  padding: 12px 0 70px;
+  grid-template-columns: 0.5fr 1fr;
+  gap: 620px; /* large horizontal gap */
+  align-items: start;
+  margin-top: 25px; /* bigger top spacing */
 }
-@media (max-width: 980px) {
+@media (max-width: 1100px) {
   .hero {
     grid-template-columns: 1fr;
-    gap: 32px;
+    gap: 64px;
+    margin-top: 64px;
   }
 }
 
-/* ===== Left column ===== */
+/* ===== Left column (hero image & copy) ===== */
 .left {
-  padding-left: 6px;
+  padding-left: 10px;
+  justify-self: start;
 }
 .figure {
-  width: 310px;
-  border-radius: 6px;
-  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.08);
-  margin: 8px 0 22px;
+  width: 500px; /* much larger illustration */
+  border-radius: 16px;
+  box-shadow: 0 18px 36px rgba(0, 0, 0, 0.12);
+  margin: 20px 0 40px;
 }
 .title {
-  font-size: 44px;
+  font-size: 80px;
   line-height: 1.08;
   font-weight: 800;
-  margin: 8px 0 10px;
+  margin: 20px 0 20px;
 }
 .sub {
-  margin: 0 0 6px;
+  margin: 0 0 16px;
   color: #334155;
-  font-size: 16px;
+  font-size: 26px;
 }
 .hint {
-  margin: 10px 0 28px;
-  font-size: 18px;
+  margin: 16px 0 40px;
+  font-size: 26px;
 }
 .btn-primary {
   display: inline-block;
@@ -78,67 +81,72 @@ img {
   color: #fff;
   text-decoration: none;
   font-weight: 800;
-  padding: 16px 42px;
-  border-radius: 12px;
-  box-shadow: 0 14px 28px rgba(59, 130, 246, 0.28);
+  font-size: 26px;
+  padding: 24px 60px;
+  border-radius: 18px;
+  box-shadow: 0 20px 40px rgba(59, 130, 246, 0.32);
   transition: transform 0.08s ease, box-shadow 0.2s ease;
 }
 .btn-primary:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 18px 32px rgba(59, 130, 246, 0.3);
+  transform: translateY(-3px);
+  box-shadow: 0 26px 48px rgba(59, 130, 246, 0.34);
 }
 
-/* ===== Right card ===== */
+/* ===== Right card (MUCH BIGGER, right-aligned) ===== */
 .card {
+  justify-self: end;
+  width: 1020px; /* wider card */
+  max-width: 100%;
   background: #fff;
-  border-radius: 18px;
-  padding: 32px 32px 24px;
-  box-shadow: 0 28px 60px rgba(2, 6, 23, 0.18);
-  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 28px;
+  padding: 64px 64px 48px;
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  box-shadow: 0 48px 100px rgba(2, 6, 23, 0.2);
 }
 .card-title {
-  font-size: 44px;
-  margin: 6px 0 6px;
+  font-size: 68px;
   font-weight: 800;
+  margin: 8px 0 16px;
 }
 .card-sub {
   color: #475569;
-  margin: 0 0 18px;
+  margin: 0 0 36px;
+  font-size: 26px;
 }
 .card-logo {
   display: flex;
   justify-content: center;
   align-items: center;
-  height: 100px;
-  margin: 8px 0 10px;
+  height: 200px;
+  margin: 20px 0 24px;
 }
 .card-logo img {
-  height: 120px;
+  height: 260px;
   width: auto;
   opacity: 0.98;
-} /* BIG in-card logo */
+}
 
-/* ===== Features (3-up) ===== */
+/* ===== Features (larger) ===== */
 .features {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 24px;
-  margin: 16px 0 18px;
+  gap: 40px;
+  margin: 28px 0 32px;
 }
-@media (max-width: 980px) {
+@media (max-width: 1100px) {
   .features {
     grid-template-columns: 1fr;
   }
 }
 .feature {
   display: grid;
-  grid-template-columns: 56px 1fr;
-  gap: 12px;
+  grid-template-columns: 88px 1fr;
+  gap: 18px;
   align-items: start;
 }
 .icon.circle {
-  height: 54px;
-  width: 54px;
+  height: 84px;
+  width: 84px;
   border-radius: 999px;
   background: #eef2ff;
   border: 1px solid #e2e8f0;
@@ -146,57 +154,57 @@ img {
   place-items: center;
 }
 .feature h3 {
-  margin: 0 0 6px;
-  font-size: 16px;
+  margin: 0 0 10px;
+  font-size: 28px;
   font-weight: 800;
 }
 .feature p {
   margin: 0;
   color: #475569;
-  font-size: 13.6px;
-  line-height: 1.55;
+  font-size: 20px;
+  line-height: 1.75;
 }
 
-/* ===== Bullet list ===== */
+/* ===== Bullet list (larger) ===== */
 .list {
-  margin-top: 12px;
+  margin-top: 24px;
   display: grid;
-  gap: 14px;
+  gap: 22px;
 }
 .list-row {
   display: grid;
-  grid-template-columns: 30px 1fr;
-  gap: 12px;
+  grid-template-columns: 44px 1fr;
+  gap: 18px;
   align-items: start;
 }
 .icon.small {
-  height: 26px;
-  width: 26px;
+  height: 38px;
+  width: 38px;
   display: grid;
   place-items: center;
 }
 .list-row h4 {
-  margin: 0 0 4px;
-  font-size: 15.5px;
+  margin: 0 0 8px;
+  font-size: 24px;
 }
 .list-row p {
   margin: 0;
   color: #475569;
-  font-size: 13.6px;
+  font-size: 20px;
 }
 
-/* ===== Icon colors ===== */
+/* ===== Icon color ===== */
 iconify-icon {
   color: #2563eb;
 }
 
-/* ===== Animations (smooth, widely supported) ===== */
+/* ===== Animations ===== */
 @keyframes floatY {
   0% {
     transform: translateY(0);
   }
   50% {
-    transform: translateY(-4px);
+    transform: translateY(-8px);
   }
   100% {
     transform: translateY(0);
@@ -207,7 +215,7 @@ iconify-icon {
     transform: scale(1);
   }
   50% {
-    transform: scale(1.08);
+    transform: scale(1.12);
   }
   100% {
     transform: scale(1);
@@ -215,14 +223,14 @@ iconify-icon {
 }
 @keyframes rotate360 {
   from {
-    transform: rotate(0deg);
+    transform: rotate(0);
   }
   to {
     transform: rotate(360deg);
   }
 }
 .icon-float {
-  animation: floatY 2.4s ease-in-out infinite;
+  animation: floatY 2.6s ease-in-out infinite;
 }
 .icon-pulse {
   animation: pulse 2.2s ease-in-out infinite;
@@ -237,7 +245,7 @@ iconify-icon {
   animation: floatY 1.8s ease-in-out infinite;
 }
 
-/* Respect user reduced-motion */
+/* Reduced motion */
 @media (prefers-reduced-motion: reduce) {
   .icon-float,
   .icon-pulse,
