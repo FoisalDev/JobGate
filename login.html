@@ -1,88 +1,104 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>JobGate — Log In</title>
-  <link rel="stylesheet" href="login.css" />
-  <script src="https://code.iconify.design/iconify-icon/2.1.0/iconify-icon.min.js"></script>
-</head>
-<body>
-  <!-- Top Logo -->
-  <header class="topbar">
-    <img src="./JobGate_logo.png" alt="JobGate Logo" class="logo-only" />
-  </header>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>JobGate — Log In</title>
+    <link rel="stylesheet" href="login.css" />
+    <script src="https://code.iconify.design/iconify-icon/2.1.0/iconify-icon.min.js"></script>
+  </head>
+  <body>
+    <!-- Top Logo -->
+    <header class="topbar">
+      <img src="./JobGate_logo.png" alt="JobGate Logo" class="logo-only" />
+    </header>
 
-  <main class="container hero">
-    <!-- Left Section -->
-    <section class="left">
-      <img src="./Human_Figure.png" alt="Graduate" class="figure" />
-      <h1 class="title">Good to see you again</h1>
-      <p class="sub">Don’t have an account? <a href="signup.html">Create now</a></p>
-    </section>
+    <main class="container hero">
+      <!-- Left Section -->
+      <section class="left">
+        <img src="./Human_Figure.png" alt="Graduate" class="figure" />
+        <h1 class="title">Good to see you again</h1>
+        <p class="sub">
+          Don’t have an account? <a href="signup.html">Create now</a>
+        </p>
+      </section>
 
-    <!-- Right Section: Login Card -->
-    <aside class="card">
-      <h2 class="card-title">Log In</h2>
-      <p class="card-sub">Welcome back to JobGate</p>
+      <!-- Right Section: Login Card -->
+      <aside class="card">
+        <h2 class="card-title">Log In</h2>
+        <p class="card-sub">Welcome back to JobGate</p>
 
-      <form class="form" action="#" method="post">
-        <!-- Email -->
-        <label class="field">
-          <div class="input-wrap">
-            <input type="email" name="email" placeholder="Email" required />
-          </div>
-        </label>
-
-        <!-- Password -->
-        <label class="field">
-          <div class="input-wrap">
-            <input type="password" id="pwd" name="password" placeholder="Password" required />
-            <button type="button" class="eye" onclick="togglePwd('pwd','eye1')" aria-label="Toggle password">
-              <iconify-icon id="eye1" icon="mdi:eye-off-outline"></iconify-icon>
-            </button>
-          </div>
-        </label>
-
-        <!-- Remember + Forgot -->
-        <div class="row-between">
-          <label class="remember">
-            <input type="checkbox" /> <span>Remember me</span>
+        <form class="form" action="#" method="post">
+          <!-- Email -->
+          <label class="field">
+            <div class="input-wrap">
+              <input type="email" name="email" placeholder="Email" required />
+            </div>
           </label>
-          <a href="#" class="muted">Forgot Password?</a>
-        </div>
 
-        <!-- Sign In button -->
-        <button class="btn-primary" type="submit">Sign In</button>
+          <!-- Password -->
+          <label class="field">
+            <div class="input-wrap">
+              <input
+                type="password"
+                id="pwd"
+                name="password"
+                placeholder="Password"
+                required
+              />
+              <button
+                type="button"
+                class="eye"
+                onclick="togglePwd('pwd','eye1')"
+                aria-label="Toggle password"
+              >
+                <iconify-icon
+                  id="eye1"
+                  icon="mdi:eye-off-outline"
+                ></iconify-icon>
+              </button>
+            </div>
+          </label>
 
-        <!-- Alternative -->
-        <div class="alt">Or continue with</div>
+          <!-- Remember + Forgot -->
+          <div class="row-between">
+            <label class="remember">
+              <input type="checkbox" /> <span>Remember me</span>
+            </label>
+            <a href="#" class="muted">Forgot Password?</a>
+          </div>
 
-        <!-- Social Buttons -->
-        <button type="button" class="btn-social">
-          <iconify-icon icon="logos:google-icon"></iconify-icon>
-          Continue with Google
-        </button>
-        <button type="button" class="btn-social">
-          <iconify-icon icon="logos:facebook"></iconify-icon>
-          Continue with Facebook
-        </button>
-      </form>
-    </aside>
-  </main>
+          <!-- Sign In button -->
+          <button class="btn-primary" type="submit">Sign In</button>
 
-  <script>
-    function togglePwd(inputId, iconId) {
-      const inp = document.getElementById(inputId);
-      const ico = document.getElementById(iconId);
-      if (inp.type === 'password') {
-        inp.type = 'text';
-        ico.setAttribute('icon','mdi:eye-outline');
-      } else {
-        inp.type = 'password';
-        ico.setAttribute('icon','mdi:eye-off-outline');
+          <!-- Alternative -->
+          <div class="alt">Or continue with</div>
+
+          <!-- Social Buttons -->
+          <button type="button" class="btn-social">
+            <iconify-icon icon="logos:google-icon"></iconify-icon>
+            Continue with Google
+          </button>
+          <button type="button" class="btn-social">
+            <iconify-icon icon="logos:facebook"></iconify-icon>
+            Continue with Facebook
+          </button>
+        </form>
+      </aside>
+    </main>
+
+    <script>
+      function togglePwd(inputId, iconId) {
+        const inp = document.getElementById(inputId);
+        const ico = document.getElementById(iconId);
+        if (inp.type === "password") {
+          inp.type = "text";
+          ico.setAttribute("icon", "mdi:eye-outline");
+        } else {
+          inp.type = "password";
+          ico.setAttribute("icon", "mdi:eye-off-outline");
+        }
       }
-    }
-  </script>
-</body>
+    </script>
+  </body>
 </html>
