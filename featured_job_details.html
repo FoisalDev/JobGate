@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="bn">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>JobGate — Job Details</title>
+    <link rel="stylesheet" href="featured_job_details.css" />
+    <script src="https://code.iconify.design/iconify-icon/2.1.0/iconify-icon.min.js"></script>
+  </head>
+  <body>
+    <!-- Top bar (same visual rhythm) -->
+    <header class="topbar">
+      <img src="./JobGate_logo.png" alt="JobGate" class="logo" />
+      <div class="search-wrap">
+        <iconify-icon icon="mdi:magnify" class="sicon"></iconify-icon>
+        <input type="text" placeholder="Search JobGate" />
+      </div>
+      <nav class="top-actions">
+        <a href="home.html" class="tlink">
+          <iconify-icon icon="mdi:home-variant"></iconify-icon> Home
+        </a>
+        <a href="#" class="tlink">
+          <iconify-icon icon="mdi:account"></iconify-icon> Profile
+        </a>
+      </nav>
+    </header>
+
+    <main class="wrap">
+      <a class="back" href="home.html">
+        <iconify-icon icon="mdi:arrow-left"></iconify-icon>
+      </a>
+
+      <section class="details-card">
+        <div class="poster big placeholder">Poster</div>
+
+        <div class="desc">
+          <!-- সব কনটেন্ট placeholder—পরে DB থেকে বসবে -->
+          <h2 id="jobTitle">[Job Title] — [Company]</h2>
+          <p class="meta" id="jobMeta">Location: [City] (Hybrid) · Type: Full-time</p>
+
+          <h3>Description</h3>
+          <p id="jobDesc">
+            Full description of the job will be shown here. Replace with real
+            content from the database later.
+          </p>
+
+          <h3>Requirements</h3>
+          <ul id="jobReq">
+            <li>Requirement 1</li>
+            <li>Requirement 2</li>
+            <li>Requirement 3</li>
+          </ul>
+
+          <div class="cta-row">
+            <button class="btn-apply">Apply Now</button>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <script>
+      // Simple demo to show how you might use a jobId from query string
+      const params = new URLSearchParams(location.search);
+      const jobId = params.get("jobId");
+
+      // Placeholder mapping (replace with DB fetch later)
+      const demo = {
+        "123": {
+          title: "[Creative Video Maker & Editor] — [iStock Media]",
+          meta: "Location: Dhaka (Hybrid) · Type: Full-time",
+          desc: "We are seeking a talented and creative Video Maker & Editor...",
+          req: ["Premiere Pro / After Effects", "CapCut basics", "Storytelling"]
+        },
+        "456": {
+          title: "[Junior Software Engineer] — [Loreem Tech Solutions]",
+          meta: "Location: Dhaka · Type: Entry-level",
+          desc: "Looking for a passionate JSE with strong problem-solving skills...",
+          req: ["HTML/CSS/JS", "PHP/MySQL basics", "Teamwork & learning mindset"]
+        }
+      };
+
+      const data = demo[jobId] || {
+        title: "[Job Title] — [Company]",
+        meta: "Location: [City] · Type: [Type]",
+        desc: "Full description placeholder…",
+        req: ["Requirement A", "Requirement B", "Requirement C"]
+      };
+
+      // Render placeholders
+      document.getElementById("jobTitle").textContent = data.title;
+      document.getElementById("jobMeta").textContent = data.meta;
+      document.getElementById("jobDesc").textContent = data.desc;
+
+      const ul = document.getElementById("jobReq");
+      ul.innerHTML = "";
+      data.req.forEach((r) => {
+        const li = document.createElement("li");
+        li.textContent = r;
+        ul.appendChild(li);
+      });
+    </script>
+  </body>
+</html>

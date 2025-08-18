@@ -10,137 +10,65 @@
   <body>
     <!-- Top bar -->
     <header class="topbar">
-      <div class="topbar-left">
+      <div class="topbar-inner container">
         <img src="./JobGate_logo.png" alt="JobGate" class="logo" />
-      </div>
 
-      <div class="search-wrap">
-        <iconify-icon icon="mdi:magnify" class="sicon"></iconify-icon>
-        <input type="text" placeholder="Search JobGate" />
-      </div>
+        <div class="search-wrap" role="search">
+          <iconify-icon icon="mdi:magnify" class="sicon"></iconify-icon>
+          <input type="text" placeholder="Search JobGate" />
+        </div>
 
-      <nav class="top-actions">
-        <a href="#" class="tlink">
-          <iconify-icon icon="mdi:home-variant" width="22" height="22"></iconify-icon>
-          Home
-        </a>
-        <a href="#" class="tlink">
-          <iconify-icon icon="mdi:account" width="22" height="22"></iconify-icon>
-          Profile
-        </a>
-        <img src="./avatar_placeholder.jpg" class="avatar" alt="User" />
-      </nav>
+        <nav class="top-actions">
+          <a href="#" class="tlink">Home</a>
+          <a href="#" class="tlink">Profile</a>
+          <img src="./avatar_placeholder.jpg" class="avatar" alt="User avatar" />
+        </nav>
+      </div>
     </header>
 
-    <!-- Page layout -->
     <div class="layout">
-      <!-- Fixed sidebar -->
+      <!-- Sidebar -->
       <aside class="sidebar">
-        <button class="sbtn active">
-          <iconify-icon icon="mdi:home" class="sib"></iconify-icon>
-          <span>Feed</span>
-        </button>
-        <button class="sbtn">
-          <iconify-icon icon="mdi:lightbulb-on-outline" class="sib"></iconify-icon>
-          <span>Career Tips</span>
-        </button>
-        <button class="sbtn">
-          <iconify-icon icon="mdi:calendar-star" class="sib"></iconify-icon>
-          <span>Job Events</span>
-        </button>
-        <button class="sbtn">
-          <iconify-icon icon="mdi:book-open-variant" class="sib"></iconify-icon>
-          <span>Courses</span>
-        </button>
-        <button class="sbtn">
-          <iconify-icon icon="mdi:account-check-outline" class="sib"></iconify-icon>
-          <span>Skill Assessment</span>
-        </button>
-        <button class="sbtn">
-          <iconify-icon icon="mdi:briefcase-outline" class="sib"></iconify-icon>
-          <span>Jobs</span>
-        </button>
-
+        <button class="sbtn active"><iconify-icon icon="mdi:home" class="sib"></iconify-icon>Feed</button>
+        <button class="sbtn"><iconify-icon icon="mdi:lightbulb-on-outline" class="sib"></iconify-icon>Career Tips</button>
+        <button class="sbtn"><iconify-icon icon="mdi:calendar-star" class="sib"></iconify-icon>Job Events</button>
+        <button class="sbtn"><iconify-icon icon="mdi:book-open-variant" class="sib"></iconify-icon>Courses</button>
+        <button class="sbtn"><iconify-icon icon="mdi:account-check-outline" class="sib"></iconify-icon>Skill Assessment</button>
+        <button class="sbtn"><iconify-icon icon="mdi:briefcase-outline" class="sib"></iconify-icon>Jobs</button>
         <div class="spacer"></div>
-
-        <button class="sbtn logout">
-          <iconify-icon icon="mdi:logout" class="sib"></iconify-icon>
-          <span>Log out</span>
-        </button>
+        <button class="sbtn logout"><iconify-icon icon="mdi:logout" class="sib"></iconify-icon>Log out</button>
       </aside>
 
       <!-- Main feed -->
       <main class="content">
         <h2 class="section-title">Featured Jobs</h2>
 
-        <!-- Job card (repeatable) -->
-        <article class="job-card">
-          <div class="job-left">
-            <div class="poster placeholder">Poster</div>
-          </div>
-
+        <!-- Job card 1 -->
+        <article class="job-card" data-job-id="123">
+          <div class="job-left"><div class="poster placeholder">Poster</div></div>
           <div class="job-right">
             <h3 class="job-title">[Job Title] — [Company]</h3>
-            <div class="meta">
-              <span>Location: [City, Country] (Hybrid)</span> ·
-              <span>Type: Full-time</span>
-            </div>
+            <div class="meta"><span>Location: [City, Country]</span> · <span>Type: Full-time</span></div>
+            <div class="short-desc"><p>Short job description here…</p></div>
 
-            <!-- Scrollable short description -->
-            <div class="short-desc">
-              <!-- এখানকার টেক্সট শুধু প্লেসহোল্ডার। ডাটাবেস থেকে এলে JS/PHP দিয়ে বসবে -->
-              <p>
-                Short description of the job will appear here. This area is
-                scrollable if content grows. Keep it concise—2–4 lines is ideal
-                to tease the job summary without overwhelming the feed.
-              </p>
-              <ul>
-                <li>Requirement bullet 1</li>
-                <li>Requirement bullet 2</li>
-                <li>Requirement bullet 3</li>
-                <li>Requirement bullet 4</li>
-                <li>Requirement bullet 5</li>
-              </ul>
-            </div>
-
-            <a class="view-details" href="job-details.html?jobId=123">
-              <iconify-icon icon="mdi:eye-outline"></iconify-icon>
-              view details
+            <!-- এখানে সঠিক ফাইলে পাঠানো হলো -->
+            <a class="view-details" href="featured_job_details.html?jobId=123" target="_blank">
+              <iconify-icon icon="mdi:eye-outline"></iconify-icon> view details
             </a>
           </div>
         </article>
 
-        <!-- Another sample card -->
-        <article class="job-card">
-          <div class="job-left">
-            <div class="poster placeholder">Poster</div>
-          </div>
-
+        <!-- Job card 2 -->
+        <article class="job-card" data-job-id="456">
+          <div class="job-left"><div class="poster placeholder">Poster</div></div>
           <div class="job-right">
             <h3 class="job-title">[Junior Software Engineer] — [Company]</h3>
-            <div class="meta">
-              <span>Location: [Dhaka, Bangladesh]</span> ·
-              <span>Type: Entry-level</span>
-            </div>
+            <div class="meta"><span>Location: [Dhaka]</span> · <span>Type: Entry-level</span></div>
+            <div class="short-desc"><p>Another short description…</p></div>
 
-            <div class="short-desc">
-              <p>
-                Brief description goes here. Replace later with real data from
-                database. This box is fixed height and scrollable for long text.
-              </p>
-              <ul>
-                <li>HTML, CSS, JavaScript basics</li>
-                <li>PHP/MySQL familiarity</li>
-                <li>Team player & problem solving</li>
-                <li>Willing to learn quickly</li>
-                <li>Good communication</li>
-                <li>More bullets…</li>
-              </ul>
-            </div>
-
-            <a class="view-details" href="job-details.html?jobId=456">
-              <iconify-icon icon="mdi:eye-outline"></iconify-icon>
-              view details
+            <!-- এখানেও সঠিক ফাইল -->
+            <a class="view-details" href="featured_job_details.html?jobId=456" target="_blank">
+              <iconify-icon icon="mdi:eye-outline"></iconify-icon> view details
             </a>
           </div>
         </article>
