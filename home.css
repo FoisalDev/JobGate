@@ -15,41 +15,48 @@ img{max-width:100%; display:block}
   background: #fff; border-bottom: 1px solid rgba(2,6,23,.06);
   height: var(--topbar-h);
 }
+/* Make the topbar inner full-width so the logo can sit at the hard left */
 .topbar-inner{
   height: 100%;
-  display: flex; align-items: center;
-  justify-content: space-between;
+  display: flex;
+  align-items: center;
   gap: 20px;
-  width: min(1380px, 96%);
-  margin: 0 auto;
-  padding: 0 12px;
+
+  /* full width, no centering */
+  width: 100%;
+  margin: 0;
+
+  /* tiny horizontal padding is ok; set left to 0 for “most left” look */
+  padding: 0 12px 0 0;
+  justify-content: space-between; /* logo left / actions right */
 }
 
-/* Logo same as index/login/signup */
+/* keep the logo hard-left */
 .logo{
   height: clamp(80px, 10vw, 120px);
   width: auto;
   object-fit: contain;
   opacity: .98;
   flex-shrink: 0;
+  margin-left: 0;              /* ensure no extra offset */
 }
 
-/* Searchbar centered */
+/* center the search bar within the available space */
 .search-wrap{
   flex: 1;
   display: flex; align-items: center; gap: 8px;
   background:#f1f5f9; border:1px solid #e2e8f0;
   border-radius:999px; padding:12px 16px;
   max-width:680px;
-  margin: 0 auto;
-}
-.search-wrap .sicon{ color:#64748b; font-size:20px }
-.search-wrap input{
-  border:0; outline:0; background:transparent; width:100%;
-  font-size:16px; color:#0f172a;
+
+  margin: 0 auto;             /* <-- this centers it */
 }
 
-.top-actions{ display:flex; align-items:center; gap:18px; flex-shrink:0 }
+.top-actions{
+  display:flex; align-items:center; gap:18px;
+  flex-shrink:0;
+}
+
 .tlink{
   display:flex; align-items:center; gap:8px; color:#0f172a; text-decoration:none;
   font-weight:700;

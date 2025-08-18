@@ -10,21 +10,24 @@
   <body>
     <!-- Top bar -->
     <header class="topbar">
-      <div class="topbar-inner container">
+      <!-- remove the `container` class here -->
+      <div class="topbar-inner">
         <img src="./JobGate_logo.png" alt="JobGate" class="logo" />
-
+    
         <div class="search-wrap" role="search">
-          <iconify-icon icon="mdi:magnify" class="sicon"></iconify-icon>
-          <input type="text" placeholder="Search JobGate" />
+          <iconify-icon icon="mdi:magnify" class="sicon" aria-hidden="true"></iconify-icon>
+          <input type="text" placeholder="Search JobGate" aria-label="Search JobGate" />
         </div>
-
-        <nav class="top-actions">
+    
+        <nav class="top-actions" aria-label="Top actions">
           <a href="#" class="tlink">Home</a>
           <a href="#" class="tlink">Profile</a>
           <img src="./avatar_placeholder.jpg" class="avatar" alt="User avatar" />
         </nav>
       </div>
     </header>
+    
+    
 
     <div class="layout">
       <!-- Sidebar -->
