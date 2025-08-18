@@ -3,120 +3,159 @@
 html, body {
   margin: 0; padding: 0;
   background: #fff; color: #0f172a;
-  font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
-  font-size: 20px; /* same base size as index */
+  font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+  font-size: 16px;
 }
 img { max-width: 100%; display: block; }
-.container { width: min(1380px, 96%); margin: 0 auto; }
+.container { width: min(1225px, 95%); margin: 20px auto; }
 
 /* ===== Top-left logo (same as index) ===== */
-.topbar { padding: 18px 0 12px; }
+.topbar { padding: 0; }
 .logo-only{
-  height: 250px; width: auto; object-fit: contain;
-  margin-left: 20px; opacity: .98;
+  height: clamp(80px, 10vw, 120px);
+  width: auto; object-fit: contain;
+  margin-left: 0; opacity: .98;
 }
 
-/* ===== Layout (same grid + big gap like index) ===== */
+/* ===== Layout (same grid + fluid gap as index) ===== */
 .hero{
   display: grid;
-  grid-template-columns: 0.8fr 1.2fr; /* left a bit narrower, right wider */
-  gap: 620px;                         /* large horizontal gap */
+  grid-template-columns: 1fr 1fr;          /* index-এর মতো সমান কলাম */
+  gap: clamp(32px, 6vw, 80px);             /* fluid horizontal gap */
   align-items: start;
-  margin-top: 35px;                   /* gap under logo */
+  margin-top: 24px;
 }
-@media (max-width: 1100px){
-  .hero{ grid-template-columns: 1fr; gap: 64px; margin-top: 64px; }
+@media (max-width: 900px){
+  .hero{ grid-template-columns: 1fr; gap: 28px; }
 }
 
-/* ===== Left column (identical scale to index) ===== */
-.left{ margin-left: -200px; }         /* nudge left like index */
+/* ===== Left column (match index scale) ===== */
+.left{ /* index-এর মতোই—কোনো negative margin নয় */ }
 .figure{
-  width: 500px; border-radius: 16px;
-  box-shadow: 0 18px 36px rgba(0,0,0,.12);
-  margin: 20px 0 40px;
+  width: clamp(220px, 26vw, 340px);
+  border-radius: 12px;
+  box-shadow: 0 8px 20px rgba(0,0,0,.12);
+  margin: 12px 0 20px;
 }
 .title{
-  font-size: 80px; line-height: 1.08; font-weight: 800;
-  margin: 20px 0 20px;
+  font-size: clamp(24px, 4vw, 32px);
+  font-weight: 800;
+  margin: 12px 0;
+  line-height: 1.12;
 }
-.sub{ margin: 0 0 16px; color:#334155; font-size: 26px; }
-.hint{ margin: 16px 0 40px; font-size: 26px; }
+.sub{
+  font-size: clamp(14px, 1.6vw, 18px);
+  margin: 0 0 10px; color:#334155;
+}
+.hint{
+  font-size: clamp(14px, 1.6vw, 18px);
+  margin: 10px 0 20px;
+}
 
-/* ===== Right card (BIG) ===== */
+/* ===== Right card (same rhythm as index card) ===== */
 .card{
   justify-self: end;
-  width: 800px; max-width: 100%;
-  background:#fff; border-radius: 28px;
-  padding: 64px 64px 48px;
-  border:1px solid rgba(15,23,42,.10);
-  box-shadow: 0 48px 100px rgba(2,6,23,.20);
+  width: 100%;
+  max-width: clamp(560px, 44vw, 820px);     /* index card width style */
+  background:#fff;
+  border-radius: 18px;
+  padding: clamp(22px, 3vw, 36px);
+  border: 1px solid rgba(15,23,42,.10);
+  box-shadow: 0 20px 50px rgba(2,6,23,.15);
 }
 .card-title{
-  font-size: 74px; font-weight: 800; margin: 8px 0 12px; text-align: center;
+  font-size: clamp(26px, 3.2vw, 36px);
+  font-weight: 800;
+  margin: 4px 0 10px; text-align:center;
 }
 .card-sub{
-  color:#475569; margin: 0 0 36px; font-size: 32px; text-align: center;
+  color:#475569; text-align:center;
+  margin: 0 0 clamp(14px, 2vw, 20px);
+  font-size: clamp(14px, 1.6vw, 18px);
 }
 
-/* ===== Form (large fields) ===== */
-.form{ display: grid; gap: 24px; }
+/* ===== Form (large but compact like index) ===== */
+.form{ display: grid; gap: clamp(14px, 2vw, 20px); }
 .field{ display:block; }
 
 .input-wrap{
   position: relative; background:#fff;
-  border: 1.6px solid #e5e7eb; border-radius: 16px;
+  border: 1.4px solid #e5e7eb; border-radius: 14px;
   box-shadow: inset 0 1px 0 rgba(0,0,0,.02);
 }
 .input-wrap input,
 .input-wrap select{
   width:100%; border:0; outline:none; background:#fff !important;
-  height: 68px; line-height: 68px;
-  padding: 0 64px 0 20px;
-  font-size: 26px; color:#0f172a;
+  height: clamp(46px, 6.5vw, 58px);
+  line-height: clamp(46px, 6.5vw, 58px);
+  padding: 0 clamp(40px, 3.2vw, 54px) 0 16px;
+  font-size: clamp(14px, 1.7vw, 18px);
+  color:#0f172a;
   -webkit-appearance: none; appearance: none;
 }
 .input-wrap input::placeholder{ color:#9ca3af; }
 .input-wrap:focus-within{
-  border-color:#3b82f6; box-shadow: 0 0 0 5px rgba(59,130,246,.12);
+  border-color:#3b82f6; box-shadow: 0 0 0 4px rgba(59,130,246,.12);
 }
 
-/* Select chevron */
+/* Select chevron (same scale) */
 .input-wrap.select .chev{
-  position:absolute; right:18px; top:50%;
-  transform: translateY(-50%); color:#64748b; font-size:28px; pointer-events:none;
-}
-
-/* Password eye buttons */
-.eye{
   position:absolute; right:12px; top:50%;
   transform: translateY(-50%);
-  width: 44px; height: 44px;
-  border:0; background:transparent; cursor:pointer; color:#64748b; font-size:26px;
+  color:#64748b; font-size: clamp(18px, 2.4vw, 24px);
+  pointer-events:none;
 }
 
-/* Button (big, same vibe as index) */
+/* Password eye buttons (same scale) */
+.eye{
+  position:absolute; right:8px; top:50%;
+  transform: translateY(-50%);
+  width: clamp(30px, 4vw, 38px);
+  height: clamp(30px, 4vw, 38px);
+  border:0; background:transparent; cursor:pointer;
+  color:#64748b; font-size: clamp(18px, 2.4vw, 24px);
+}
+
+/* Button (match index vibe) */
 .btn-primary{
-  margin-top: 8px;
+  margin-top: 4px;
   display:inline-block; background:#3b82f6; color:#fff; text-decoration:none;
-  font-weight:800; font-size: 26px;
-  padding: 24px 60px; border-radius: 18px; border:0; cursor:pointer;
-  box-shadow: 0 20px 40px rgba(59,130,246,.32);
+  font-weight:800; border:0; cursor:pointer;
+  font-size: clamp(14px, 1.7vw, 18px);
+  padding: clamp(10px, 1.6vw, 14px) clamp(24px, 3.2vw, 34px);
+  border-radius: 12px;
+  box-shadow: 0 12px 26px rgba(59,130,246,.26);
   transition: transform .08s ease, box-shadow .2s ease, background .2s ease;
 }
-.btn-primary:hover{ transform: translateY(-3px); box-shadow: 0 26px 48px rgba(59,130,246,.34); }
+.btn-primary:hover{ transform: translateY(-1px); box-shadow: 0 16px 28px rgba(59,130,246,.28); }
 
 .alt{
-  text-align:center; margin: 18px 0 0; color:#0f172a; font-weight:700; font-size: 22px;
+  text-align:center; margin: 14px 0 0;
+  color:#0f172a; font-weight:700; font-size: clamp(13px, 1.6vw, 16px);
 }
 .alt a{ color:#2563eb; text-decoration:none; }
 
-/* ===== Icon color (if you add icons later) ===== */
+/* ===== Icon color (if any icons used) ===== */
 iconify-icon{ color:#64748b; }
 
-/* ===== Autofill fix (Safari/Chrome) ===== */
+/* ===== Autofill fix ===== */
 .input-wrap input:-webkit-autofill,
 .input-wrap select:-webkit-autofill{
   -webkit-box-shadow: 0 0 0 1000px #fff inset !important;
   -webkit-text-fill-color: #0f172a !important;
   caret-color: #0f172a !important;
+}
+
+/* ===== Animations (match index) ===== */
+@keyframes floatY { 0%{transform:translateY(0)} 50%{transform:translateY(-6px)} 100%{transform:translateY(0)} }
+@keyframes pulse  { 0%{transform:scale(1)} 50%{transform:scale(1.08)} 100%{transform:scale(1)} }
+@keyframes rotate360 { from{transform:rotate(0)} to{transform:rotate(360deg)} }
+.icon-float{ animation: floatY 2.4s ease-in-out infinite; }
+.icon-pulse{ animation: pulse 2.2s ease-in-out infinite; }
+.icon-rotate{ animation: rotate360 4.5s linear infinite; }
+.icon-rotate-slow{ animation: rotate360 8s linear infinite; }
+.icon-bounce{ animation: floatY 1.8s ease-in-out infinite; }
+
+@media (prefers-reduced-motion: reduce){
+  .icon-float,.icon-pulse,.icon-rotate,.icon-rotate-slow,.icon-bounce{ animation: none; }
 }
