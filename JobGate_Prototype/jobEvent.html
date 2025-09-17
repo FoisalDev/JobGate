@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>JobGate — Job Events</title>
+    <link rel="stylesheet" href="job.css" />
+    <script src="https://code.iconify.design/iconify-icon/2.1.0/iconify-icon.min.js"></script>
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="topbar-inner">
+        <img src="./JobGate_logo.png" alt="JobGate" class="logo" />
+        <div class="search-wrap" role="search">
+          <iconify-icon icon="mdi:magnify" class="sicon"></iconify-icon>
+          <input type="text" placeholder="Search JobGate" />
+        </div>
+        <nav class="top-actions" aria-label="Top actions">
+          <a href="#" class="tlink">Home</a>
+          <a href="#" class="tlink">Profile</a>
+          <img
+            src="./avatar_placeholder.jpg"
+            class="avatar"
+            alt="User avatar"
+          />
+        </nav>
+      </div>
+    </header>
+
+    <div class="layout">
+      <aside class="sidebar">
+        <button class="sbtn">
+          <iconify-icon icon="mdi:home" class="sib"></iconify-icon>Feed
+        </button>
+        <button class="sbtn">
+          <iconify-icon
+            icon="mdi:lightbulb-on-outline"
+            class="sib"
+          ></iconify-icon
+          >Career Tips
+        </button>
+        <button class="sbtn active">
+          <iconify-icon icon="mdi:calendar-star" class="sib"></iconify-icon>Job
+          Events
+        </button>
+        <button class="sbtn">
+          <iconify-icon icon="mdi:book-open-variant" class="sib"></iconify-icon
+          >Courses
+        </button>
+        <button class="sbtn">
+          <iconify-icon
+            icon="mdi:account-check-outline"
+            class="sib"
+          ></iconify-icon
+          >Skill Assessment
+        </button>
+        <button class="sbtn">
+          <iconify-icon icon="mdi:briefcase-outline" class="sib"></iconify-icon
+          >Jobs
+        </button>
+        <div class="spacer"></div>
+        <button class="sbtn logout">
+          <iconify-icon icon="mdi:logout" class="sib"></iconify-icon>Log out
+        </button>
+      </aside>
+
+      <main class="content">
+        <header class="events-header">
+          <h1 class="page-title">Events</h1>
+          <div class="controls-wrapper">
+            <button class="btn btn-primary">
+              <iconify-icon icon="mdi:check-decagram-outline"></iconify-icon>
+              Check Event
+            </button>
+            <div class="filter-group">
+              <button class="filter-btn">All</button>
+              <button class="filter-btn active">Job fair</button>
+              <button class="filter-btn">Internship fair</button>
+            </div>
+          </div>
+        </header>
+
+        <div class="events-grid">
+          <article class="event-card">
+            <div class="event-body text-only">
+              <h3 class="event-title">
+                Yakima Development Association Job Fair 2025
+              </h3>
+              <p class="event-meta">
+                Event Title: Development Association Job Fair 2025 <br />
+                Date: July 1, 2025 - July 3, 2025 <br />
+                Organizer: Yakima Country <br />
+                Description: <br />
+                Development Association Job Fair 2025 brings together top
+                companies, recruiters, and career coaches under one roof. This
+                three-day event is your opportunity to meet industry leaders,
+                interview on the spot, and receive personalized career
+                development advice.
+              </p>
+              <a href="#" class="view-details">View Details</a>
+            </div>
+          </article>
+
+          <article class="event-card">
+            <img
+              src="https://i.imgur.com/uU59s6S.png"
+              alt="Coders Combat 4.0"
+              class="event-image"
+            />
+            <div class="event-body">
+              <h3 class="event-title">UIU CODERS COMBAT 4.0</h3>
+              <p class="event-desc">
+                Remember how we mentioned about Coders Combat happening every
+                time we stepped into your DMs? Guess what! It's finally here.
+                And this time — it's bigger, better, and more exciting than ever
+                before! Teaming up with none other than Shikhbe Shobai as our
+                Technology & Knowledge partner, UIU Computer Club, one of the
+                leading clubs in the tech arena of Bangladesh, brings Coders
+                Combat 4.0, an event method to challenge your problem-solving
+                skills, apply your love for coding, and prepare you for both
+                ICPC and the upcoming National Collegiate Programming Contest.
+              </p>
+              <a href="#" class="view-details">View Details</a>
+            </div>
+          </article>
+
+          <article class="event-card">
+            <img
+              src="https://i.imgur.com/gK52BLe.png"
+              alt="IEEE PES Day"
+              class="event-image"
+            />
+            <div class="event-body">
+              <h3 class="event-title">IEEE PES DAY 2025</h3>
+              <p class="event-desc">
+                Join us for IEEE PES Day 2025 at UIU! The IEEE UIU Student
+                Branch is proud to host IEEE PES Day 2025, a celebration of
+                innovation, sustainability, and the future of energy.
+                <br />Theme: "Clean Energy, Smarter Grids, Better Lives"
+              </p>
+              <a href="#" class="view-details">View Details</a>
+            </div>
+          </article>
+
+          <article class="event-card">
+            <img
+              src="https://i.imgur.com/tYt3LpS.png"
+              alt="Online Job Fair"
+              class="event-image"
+            />
+            <div class="event-body">
+              <h3 class="event-title">Campo wave 2025</h3>
+              <p class="event-desc">
+                We are offering an exciting Job Fair to be held on 10-20th
+                December bringing together top companies and talented job
+                seekers. This event will feature on-spot interviews, career
+                counseling, and networking opportunities for all participants.
+              </p>
+              <a href="#" class="view-details">View Details</a>
+            </div>
+          </article>
+        </div>
+      </main>
+    </div>
+  </body>
+</html>
