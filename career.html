@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="bn">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>JobGate — Career Tips</title>
+    <link rel="stylesheet" href="career.css" />
+    <script src="https://code.iconify.design/iconify-icon/2.1.0/iconify-icon.min.js"></script>
+  </head>
+  <body>
+    <!-- Top bar -->
+    <header class="topbar">
+      <div class="topbar-inner">
+        <img src="./JobGate_logo.png" alt="JobGate" class="logo" />
+        <div class="search-wrap" role="search">
+          <iconify-icon
+            icon="mdi:magnify"
+            class="sicon"
+            aria-hidden="true"
+          ></iconify-icon>
+          <input
+            type="text"
+            placeholder="Search JobGate"
+            aria-label="Search JobGate"
+          />
+        </div>
+        <nav class="top-actions" aria-label="Top actions">
+          <a href="#" class="tlink">Home</a>
+          <a href="#" class="tlink">Profile</a>
+          <img
+            src="./avatar_placeholder.jpg"
+            class="avatar"
+            alt="User avatar"
+          />
+        </nav>
+      </div>
+    </header>
+
+    <!-- Page layout -->
+    <div class="layout">
+      <!-- Sidebar -->
+      <aside class="sidebar">
+        <button class="sbtn">
+          <iconify-icon icon="mdi:home" class="sib"></iconify-icon>Feed
+        </button>
+        <button class="sbtn active">
+          <iconify-icon
+            icon="mdi:lightbulb-on-outline"
+            class="sib"
+          ></iconify-icon
+          >Career Tips
+        </button>
+        <button class="sbtn">
+          <iconify-icon icon="mdi:calendar-star" class="sib"></iconify-icon>Job
+          Events
+        </button>
+        <button class="sbtn">
+          <iconify-icon icon="mdi:book-open-variant" class="sib"></iconify-icon
+          >Courses
+        </button>
+        <button class="sbtn">
+          <iconify-icon
+            icon="mdi:account-check-outline"
+            class="sib"
+          ></iconify-icon
+          >Skill Assessment
+        </button>
+        <button class="sbtn">
+          <iconify-icon icon="mdi:briefcase-outline" class="sib"></iconify-icon
+          >Jobs
+        </button>
+        <div class="spacer"></div>
+        <button class="sbtn logout">
+          <iconify-icon icon="mdi:logout" class="sib"></iconify-icon>Log out
+        </button>
+      </aside>
+
+      <!-- Main content -->
+      <main class="content">
+        <h2 class="section-title">Career Advice</h2>
+        <p class="section-description">
+          Get practical advice from career experts on job searching,
+          professional growth, and career success!
+        </p>
+
+        <!-- Career Advice Cards -->
+        <section class="career-tips">
+          <!-- Tip 1 -->
+          <article class="tip-card">
+            <div class="tip-card-left">
+              <div class="tip-image-placeholder">Image</div>
+            </div>
+
+            <div class="tip-card-right">
+              <h4 class="tip-card-title">
+                How to Stand Out in Your Job Application
+              </h4>
+              <div class="tip-meta">
+                <span>By [Author]</span> ·
+                <span>Category: Application Tips</span>
+              </div>
+
+              <div class="tip-card-desc">
+                <p>
+                  Quick tips on how to improve your chances of landing your
+                  dream job by making your job application stand out...
+                </p>
+              </div>
+
+              <a class="view-details" href="career_tip_details.html?tipId=123">
+                <iconify-icon icon="mdi:eye-outline"></iconify-icon> View
+                Details
+              </a>
+            </div>
+          </article>
+
+          <!-- Tip 2 -->
+          <article class="tip-card">
+            <div class="tip-card-left">
+              <div class="tip-image-placeholder">Image</div>
+            </div>
+
+            <div class="tip-card-right">
+              <h4 class="tip-card-title">
+                Tips for a Successful Job Interview
+              </h4>
+              <div class="tip-meta">
+                <span>By [Author]</span> · <span>Category: Interview Tips</span>
+              </div>
+
+              <div class="tip-card-desc">
+                <p>
+                  Prepare for your next interview with these top tips, including
+                  how to answer common questions...
+                </p>
+              </div>
+
+              <a class="view-details" href="career_tip_details.html?tipId=124">
+                <iconify-icon icon="mdi:eye-outline"></iconify-icon> View
+                Details
+              </a>
+            </div>
+          </article>
+        </section>
+
+        <!-- More Sections -->
+        <section class="career-tips">
+          <!-- More Career Tips Cards can go here -->
+        </section>
+      </main>
+    </div>
+  </body>
+</html>
