@@ -1,14 +1,13 @@
 <!DOCTYPE html>
-<html lang="bn">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>JobGate — Career Tips</title>
     <link rel="stylesheet" href="career.css" />
     <script src="https://code.iconify.design/iconify-icon/2.1.0/iconify-icon.min.js"></script>
   </head>
   <body>
-    <!-- Top bar -->
     <header class="topbar">
       <div class="topbar-inner">
         <img src="./JobGate_logo.png" alt="JobGate" class="logo" />
@@ -36,9 +35,7 @@
       </div>
     </header>
 
-    <!-- Page layout -->
     <div class="layout">
-      <!-- Sidebar -->
       <aside class="sidebar">
         <button class="sbtn">
           <iconify-icon icon="mdi:home" class="sib"></iconify-icon>Feed
@@ -75,77 +72,143 @@
         </button>
       </aside>
 
-      <!-- Main content -->
       <main class="content">
-        <h2 class="section-title">Career Advice</h2>
-        <p class="section-description">
-          Get practical advice from career experts on job searching,
-          professional growth, and career success!
-        </p>
+        <header class="page-header">
+          <h1 class="page-title">Career Advice</h1>
+          <p class="page-desc">
+            We want to help you build a career you love. Get practical advice
+            from The Daily Muse on finding a job, exploring different career
+            paths, and succeeding in the work you're doing today.
+          </p>
+        </header>
 
-        <!-- Career Advice Cards -->
-        <section class="career-tips">
-          <!-- Tip 1 -->
-          <article class="tip-card">
-            <div class="tip-card-left">
-              <div class="tip-image-placeholder">Image</div>
-            </div>
-
-            <div class="tip-card-right">
-              <h4 class="tip-card-title">
-                How to Stand Out in Your Job Application
-              </h4>
-              <div class="tip-meta">
-                <span>By [Author]</span> ·
-                <span>Category: Application Tips</span>
+        <section class="articles-section">
+          <h2 class="section-heading">MOST POPULAR</h2>
+          <div class="articles-grid">
+            <article class="article-card">
+              <img
+                src="https://i.imgur.com/gYfUTn8.png"
+                alt="Article thumbnail"
+                class="card-image"
+              />
+              <div class="card-body">
+                <div class="card-author">
+                  <img
+                    src="https://i.imgur.com/avatar1.png"
+                    alt="Author avatar"
+                  />
+                  <span>BY MANDELA CALDAS</span>
+                </div>
+                <h3 class="card-title">
+                  Your ADA Rights: Requesting Remote Work For Mental...
+                </h3>
+                <p class="card-category">WORK-LIFE BALANCE</p>
               </div>
-
-              <div class="tip-card-desc">
-                <p>
-                  Quick tips on how to improve your chances of landing your
-                  dream job by making your job application stand out...
-                </p>
+            </article>
+            <article class="article-card">
+              <img
+                src="https://i.imgur.com/uP1hcrC.png"
+                alt="Article thumbnail"
+                class="card-image"
+              />
+              <div class="card-body">
+                <div class="card-author sponsored">
+                  <img
+                    src="https://i.imgur.com/lowes-logo.png"
+                    alt="Sponsor logo"
+                  />
+                  <span>SPONSORED</span>
+                </div>
+                <h3 class="card-title">
+                  30+ Behavioral Interview Questions to Prep For (With...
+                </h3>
+                <p class="card-category">INTERVIEWING</p>
               </div>
-
-              <a class="view-details" href="career_tip_details.html?tipId=123">
-                <iconify-icon icon="mdi:eye-outline"></iconify-icon> View
-                Details
-              </a>
-            </div>
-          </article>
-
-          <!-- Tip 2 -->
-          <article class="tip-card">
-            <div class="tip-card-left">
-              <div class="tip-image-placeholder">Image</div>
-            </div>
-
-            <div class="tip-card-right">
-              <h4 class="tip-card-title">
-                Tips for a Successful Job Interview
-              </h4>
-              <div class="tip-meta">
-                <span>By [Author]</span> · <span>Category: Interview Tips</span>
+            </article>
+            <article class="article-card">
+              <img
+                src="https://i.imgur.com/G4hqi28.png"
+                alt="Article thumbnail"
+                class="card-image"
+              />
+              <div class="card-body">
+                <div class="card-author">
+                  <img
+                    src="https://i.imgur.com/avatar2.png"
+                    alt="Author avatar"
+                  />
+                  <span>BY PUNEET SANDHU</span>
+                </div>
+                <h3 class="card-title">
+                  9 Signs You're in a Toxic Work Environment—and...
+                </h3>
+                <p class="card-category">WORK RELATIONSHIPS</p>
               </div>
-
-              <div class="tip-card-desc">
-                <p>
-                  Prepare for your next interview with these top tips, including
-                  how to answer common questions...
-                </p>
-              </div>
-
-              <a class="view-details" href="career_tip_details.html?tipId=124">
-                <iconify-icon icon="mdi:eye-outline"></iconify-icon> View
-                Details
-              </a>
-            </div>
-          </article>
+            </article>
+          </div>
         </section>
 
-        <!-- More Sections -->
-        <section class="career-tips">
-          <!-- More Career Tips Cards can go here -->
+        <section class="articles-section">
+          <h2 class="section-heading">IN THE NEWS</h2>
+          <div class="articles-grid">
+            <article class="article-card">
+              <img
+                src="https://i.imgur.com/8QzK4a9.png"
+                alt="Article thumbnail"
+                class="card-image"
+              />
+              <div class="card-body">
+                <div class="card-author">
+                  <img
+                    src="https://i.imgur.com/avatar3.png"
+                    alt="Author avatar"
+                  />
+                  <span>BY ALYSE MAGUIRE</span>
+                </div>
+                <h3 class="card-title">
+                  What Companies Mean When They Say "Don't Use AI in Your..."
+                </h3>
+              </div>
+            </article>
+            <article class="article-card">
+              <img
+                src="https://i.imgur.com/5u0w3Jk.png"
+                alt="Article thumbnail"
+                class="card-image"
+              />
+              <div class="card-body">
+                <div class="card-author">
+                  <img
+                    src="https://i.imgur.com/avatar3.png"
+                    alt="Author avatar"
+                  />
+                  <span>BY ALYSE MAGUIRE</span>
+                </div>
+                <h3 class="card-title">
+                  When and How to Take a "Buyout" or Voluntary Severance
+                </h3>
+              </div>
+            </article>
+            <article class="article-card">
+              <img
+                src="https://i.imgur.com/2YcW9kF.png"
+                alt="Article thumbnail"
+                class="card-image"
+              />
+              <div class="card-body">
+                <div class="card-author">
+                  <img
+                    src="https://i.imgur.com/avatar4.png"
+                    alt="Author avatar"
+                  />
+                  <span>BY AMANDA CARDOSO</span>
+                </div>
+                <h3 class="card-title">
+                  Introducing Maya: The Muse AI-Powered Career Advice
+                </h3>
+              </div>
+            </article>
+          </div>
         </section>
       </main>
     </div>
