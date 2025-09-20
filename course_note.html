@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="bn">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>JobGate — Course Note</title>
+    <link rel="stylesheet" href="course_note.css" />
+    <script src="https://code.iconify.design/iconify-icon/2.1.0/iconify-icon.min.js"></script>
+  </head>
+  <body>
+    <!-- Top bar -->
+    <header class="topbar">
+      <div class="topbar-inner">
+        <img src="./JobGate_logo.png" alt="JobGate" class="logo" />
+        <div class="search-wrap">
+          <iconify-icon icon="mdi:magnify"></iconify-icon>
+          <input type="text" placeholder="Search JobGate" />
+        </div>
+        <nav class="top-actions">
+          <a href="home.html" class="tlink">Home</a>
+          <a href="#" class="tlink">Profile</a>
+          <img src="./avatar_placeholder.jpg" class="avatar" />
+        </nav>
+      </div>
+    </header>
+
+    <main class="wrap">
+      <div class="topline">
+        <a
+          class="back"
+          href="courses.html"
+          onclick="if(history.length>1){history.back();return false;}"
+        >
+          <iconify-icon icon="mdi:arrow-left"></iconify-icon>
+        </a>
+        <h1 class="page-title">Skill Up with Courses</h1>
+      </div>
+
+      <section class="note-card">
+        <header class="note-head">
+          <h2 id="cTitle">Course Title</h2>
+          <a id="cSubtitle" href="#">Subtitle</a>
+        </header>
+
+        <article id="noteBody" class="note-body"></article>
+
+        <div class="cta-row">
+          <button class="btn-done" id="btnDone">Done</button>
+        </div>
+      </section>
+    </main>
+
+    <script>
+      const id = new URLSearchParams(location.search).get("courseId");
+
+      const NOTES = {
+        c1: {
+          title: "AI and ML",
+          subtitle: "Natural Language Processing",
+          html: `
+            <p>Learn how machines process language using AI & ML.</p>
+            <h3>Topics</h3>
+            <ol>
+              <li>Intro to NLP</li>
+              <li>Text Preprocessing</li>
+              <li>Feature Extraction</li>
+              <li>Sequence Models</li>
+            </ol>
+          `,
+        },
+        c2: {
+          title: "AI and ML",
+          subtitle: "Deep Learning Fundamentals",
+          html: "<p>Deep Learning core concepts with examples.</p>",
+        },
+        c3: {
+          title: "Software Testing",
+          subtitle: "SDLC",
+          html: "<p>Overview of Software Development Life Cycle in Testing.</p>",
+        },
+        c4: {
+          title: "Software Testing",
+          subtitle: "Test Automation",
+          html: "<p>Automation frameworks, tools, and CI/CD integration.</p>",
+        },
+      };
+
+      const data = NOTES[id] || {
+        title: "Unknown",
+        subtitle: "—",
+        html: "<p>No details available</p>",
+      };
+
+      document.getElementById("cTitle").textContent = data.title;
+      document.getElementById("cSubtitle").textContent = data.subtitle;
+      document.getElementById("noteBody").innerHTML = data.html;
+
+      document.getElementById("btnDone").addEventListener("click", () => {
+        if (window.opener) {
+          window.close();
+        } else {
+          location.href = "courses.html";
+        }
+      });
+    </script>
+  </body>
+</html>
