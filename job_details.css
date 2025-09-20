@@ -1,0 +1,104 @@
+@import url("home.css");
+
+.wrap {
+  width: min(1100px, 96%);
+  margin: 0 auto;
+  padding: 24px 28px 48px;
+}
+.back {
+  display: inline-grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  background: #e8efff;
+  color: #1e40af;
+  border-radius: 10px;
+  text-decoration: none;
+  font-size: 22px;
+  margin-bottom: 10px;
+}
+
+.details {
+  background: #fff;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 14px;
+  box-shadow: 0 16px 34px rgba(2, 6, 23, 0.08);
+  padding: 20px 22px;
+}
+.h {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 10px;
+}
+.logoimg {
+  width: 48px;
+  height: 48px;
+  border-radius: 10px;
+  object-fit: cover;
+}
+.company {
+  color: #64748b;
+  font-weight: 800;
+  margin: 0;
+}
+h2 {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 900;
+}
+
+.meta {
+  display: grid;
+  grid-template-columns: repeat(3, max-content);
+  gap: 18px 32px;
+  margin: 10px 0 14px;
+  color: #0f172a;
+}
+.meta .full {
+  grid-column: 1 / -1;
+}
+.meta dt {
+  font-weight: 800;
+  color: #475569;
+}
+.meta dd {
+  margin: 0;
+  font-weight: 800;
+}
+
+.desc h3 {
+  margin: 14px 0 8px;
+  font-size: 17px;
+  font-weight: 800;
+}
+.desc p {
+  margin: 0 0 8px;
+  color: #334155;
+}
+.desc ul {
+  margin: 0 0 8px 18px;
+  line-height: 1.6;
+  color: #334155;
+}
+
+.cta-row {
+  margin-top: 12px;
+}
+.btn-apply {
+  background: #3b82f6;
+  color: #fff;
+  border: 0;
+  border-radius: 12px;
+  padding: 12px 22px;
+  font-weight: 900;
+  cursor: pointer;
+  box-shadow: 0 12px 26px rgba(59, 130, 246, 0.26);
+}
+
+/* Responsive */
+@media (max-width: 760px) {
+  .meta {
+    grid-template-columns: 1fr;
+  }
+}

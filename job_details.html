@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="bn">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>JobGate — Job Details</title>
+    <link rel="stylesheet" href="job_details.css" />
+    <script src="https://code.iconify.design/iconify-icon/2.1.0/iconify-icon.min.js"></script>
+  </head>
+  <body>
+    <!-- Top bar -->
+    <header class="topbar">
+      <div class="topbar-inner">
+        <img src="./JobGate_logo.png" alt="JobGate" class="logo" />
+        <div class="search-wrap" role="search">
+          <iconify-icon icon="mdi:magnify" class="sicon"></iconify-icon>
+          <input type="text" placeholder="Search JobGate" />
+        </div>
+        <nav class="top-actions">
+          <a href="home.html" class="tlink">Home</a>
+          <a href="#" class="tlink">Profile</a>
+          <img src="./avatar_placeholder.jpg" class="avatar" />
+        </nav>
+      </div>
+    </header>
+
+    <main class="wrap">
+      <a
+        class="back"
+        href="jobs.html"
+        onclick="if(history.length>1){history.back();return false;}"
+      >
+        <iconify-icon icon="mdi:arrow-left"></iconify-icon>
+      </a>
+
+      <section class="details">
+        <header class="h">
+          <img id="dLogo" class="logoimg" src="" alt="Company logo" />
+          <div>
+            <h2 id="dTitle">[Job Title]</h2>
+            <p id="dCompany" class="company">[Company]</p>
+          </div>
+        </header>
+
+        <dl class="meta">
+          <div>
+            <dt>Type</dt>
+            <dd id="dType">—</dd>
+          </div>
+          <div>
+            <dt>Salary</dt>
+            <dd id="dSalary">—</dd>
+          </div>
+          <div>
+            <dt>Deadline</dt>
+            <dd id="dDeadline">—</dd>
+          </div>
+          <div class="full">
+            <dt>Required Skills</dt>
+            <dd id="dSkills">—</dd>
+          </div>
+        </dl>
+
+        <article class="desc">
+          <h3>Description</h3>
+          <p id="dDesc">—</p>
+
+          <h3>Responsibilities</h3>
+          <ul id="dResp"></ul>
+
+          <h3>Requirements</h3>
+          <ul id="dReq"></ul>
+        </article>
+
+        <div class="cta-row">
+          <button class="btn-apply" onclick="alert('Apply clicked (demo)')">
+            Apply Now
+          </button>
+        </div>
+      </section>
+    </main>
+
+    <script>
+      const JOBS = {
+        j1: {
+          title: "Software Engineer",
+          company: "Google",
+          logo: "https://logo.clearbit.com/google.com",
+          type: "Full Time",
+          salary: 20000,
+          deadline: "In a Month",
+          skills: ["C++", "Java", "Python", "SQL"],
+          desc: "Work on scalable systems and improve core products.",
+          resp: [
+            "Design, develop, and maintain services",
+            "Write clean, testable code",
+            "Collaborate with cross-functional teams",
+          ],
+          req: [
+            "BS in CS or related",
+            "2+ years experience",
+            "Strong algorithms & data structures",
+          ],
+        },
+        j2: {
+          title: "Senior Software Engineer",
+          company: "Facebook",
+          logo: "https://logo.clearbit.com/facebook.com",
+          type: "Full Time",
+          salary: 15000,
+          deadline: "In 15 days",
+          skills: ["C#", "Java", "Python", "SQL"],
+          desc: "Build high-performance services powering social experiences.",
+          resp: [
+            "Own services end-to-end",
+            "Mentor teammates",
+            "Improve reliability",
+          ],
+          req: [
+            "5+ years experience",
+            "Distributed systems knowledge",
+            "Production debugging",
+          ],
+        },
+        j3: {
+          title: "Front-End Web Developer",
+          company: "Shopify",
+          logo: "https://logo.clearbit.com/shopify.com",
+          type: "Full Time",
+          salary: 25000,
+          deadline: "In 20 days",
+          skills: ["HTML", "CSS", "JavaScript", "React"],
+          desc: "Create delightful storefront experiences for merchants.",
+          resp: [
+            "Implement UI from design",
+            "Maintain component library",
+            "Performance tuning",
+          ],
+          req: ["Strong JS/React", "Accessibility basics", "Git workflow"],
+        },
+        j4: {
+          title: "QA Engineer",
+          company: "Atlassian",
+          logo: "https://logo.clearbit.com/atlassian.com",
+          type: "Part Time",
+          salary: 12000,
+          deadline: "In 10 days",
+          skills: ["Manual Testing", "Selenium", "JMeter"],
+          desc: "Ensure product quality through automated & manual tests.",
+          resp: [
+            "Author test plans",
+            "Build regression suites",
+            "Analyze defects",
+          ],
+          req: [
+            "Testing fundamentals",
+            "Automation basics",
+            "Clear communication",
+          ],
+        },
+        j5: {
+          title: "Computer Operator",
+          company: "Local Bank",
+          logo: "https://logo.clearbit.com/chase.com",
+          type: "Full Time",
+          salary: 8000,
+          deadline: "In 7 days",
+          skills: ["MS Office", "Data Entry", "Hardware basics"],
+          desc: "Operate systems, maintain logs, assist branch operations.",
+          resp: ["Monitor terminals", "Report issues", "Daily backups"],
+          req: ["Basic IT knowledge", "Accuracy & speed", "Teamwork"],
+        },
+      };
+
+      function fmtMoney(n) {
+        return "$" + n.toLocaleString();
+      }
+
+      const id = new URLSearchParams(location.search).get("jobId");
+      const d = JOBS[id] || JOBS.j1;
+
+      dLogo.src = d.logo;
+      dTitle.textContent = d.title;
+      dCompany.textContent = d.company;
+      dType.textContent = d.type;
+      dSalary.textContent = fmtMoney(d.salary);
+      dDeadline.textContent = d.deadline;
+      dSkills.textContent = d.skills.join(", ");
+      dDesc.textContent = d.desc;
+
+      function fillList(ulId, items) {
+        const ul = document.getElementById(ulId);
+        ul.innerHTML = items.map((i) => `<li>${i}</li>`).join("");
+      }
+      fillList("dResp", d.resp);
+      fillList("dReq", d.req);
+    </script>
+  </body>
+</html>
