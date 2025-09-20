@@ -1,0 +1,141 @@
+@import url("home.css");
+
+.page-title {
+  margin: 8px 0 16px;
+  font-size: 36px;
+  font-weight: 900;
+}
+
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin: 6px 0 18px;
+}
+.input {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 999px;
+  padding: 10px 14px;
+  min-width: 280px;
+}
+.input input {
+  border: 0;
+  outline: 0;
+  background: transparent;
+  font-size: 15px;
+  width: 240px;
+}
+.select {
+  appearance: none;
+  background: #eef2f7;
+  border: 1px solid #dbe2ea;
+  border-radius: 12px;
+  padding: 10px 14px;
+  font-weight: 800;
+  color: #0f172a;
+}
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: #3b82f6;
+  color: #fff;
+  text-decoration: none;
+  border-radius: 12px;
+  padding: 10px 16px;
+  font-weight: 800;
+  box-shadow: 0 10px 22px rgba(59, 130, 246, 0.22);
+}
+
+.cat-head {
+  font-size: 20px;
+  font-weight: 900;
+  margin: 12px 0 12px;
+}
+
+.row {
+  --min: 280px;
+  display: grid;
+  gap: 24px;
+  grid-template-columns: repeat(auto-fill, minmax(var(--min), 1fr));
+}
+
+.course-card {
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 10px 24px rgba(2, 6, 23, 0.06);
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+.course-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 16px 32px rgba(2, 6, 23, 0.12);
+}
+
+.thumb {
+  aspect-ratio: 16 / 9;
+  background: var(--thumb, url("./course_banner.jpg"));
+  background-size: cover;
+  background-position: center;
+  filter: saturate(0.95);
+}
+
+.card-inner {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px;
+  min-height: 200px;
+}
+.title {
+  font-size: 17px;
+  font-weight: 900;
+  margin: 0;
+  color: #0f172a;
+}
+.subtitle {
+  margin: 0;
+  font-weight: 700;
+  color: #2b2f39;
+}
+.blurb {
+  color: #334155;
+  font-size: 14px;
+  line-height: 1.55;
+  margin: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.footer {
+  margin-top: auto;
+}
+.note {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #2563eb;
+  text-decoration: none;
+  font-weight: 800;
+}
+
+@media (max-width: 700px) {
+  .controls {
+    gap: 10px;
+  }
+  .input {
+    min-width: 220px;
+  }
+  .input input {
+    width: 180px;
+  }
+}
