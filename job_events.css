@@ -1,0 +1,123 @@
+/* Reuse base styles */
+@import url("home.css");
+
+/* Page heading */
+.page-title {
+  margin: 8px 0 18px;
+  font-size: 32px;
+  line-height: 1.2;
+  font-weight: 900;
+}
+
+/* Toolbar */
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  margin: 6px 0 20px;
+  flex-wrap: wrap;
+}
+
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: #3b82f6;
+  color: #fff;
+  text-decoration: none;
+  border-radius: 12px;
+  padding: 10px 14px;
+  font-weight: 800;
+  box-shadow: 0 10px 22px rgba(59, 130, 246, 0.22);
+}
+
+.filters {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.chip {
+  border: 0;
+  background: #e5e7eb;
+  color: #0f172a;
+  font-weight: 800;
+  border-radius: 12px;
+  padding: 10px 16px;
+  cursor: pointer;
+}
+.chip.active {
+  background: #f1f5f9;
+  box-shadow: inset 0 0 0 2px #cbd5e1;
+}
+
+/* Grid */
+.events-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 22px;
+}
+@media (max-width: 1100px) {
+  .events-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Card */
+.event-card {
+  background: #fff;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 12px;
+  box-shadow: 0 14px 28px rgba(2, 6, 23, 0.06);
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: 1fr 1.1fr;
+  gap: 0;
+}
+.poster {
+  background: #f1f5f9;
+  display: grid;
+  place-items: center;
+}
+.poster-ph {
+  width: 92%;
+  height: 180px;
+  border-radius: 10px;
+  background: #e5e7eb;
+  border: 1px dashed #cbd5e1;
+  display: grid;
+  place-items: center;
+  color: #64748b;
+  font-weight: 800;
+}
+.event-body {
+  padding: 14px 16px 18px;
+}
+.event-title {
+  margin: 2px 0 6px;
+  font-size: 18px;
+  font-weight: 900;
+  color: #0f172a;
+}
+.event-snippet {
+  color: #334155;
+  line-height: 1.55;
+  font-size: 14px;
+  margin: 0 0 8px;
+}
+.details {
+  display: inline-block;
+  font-weight: 800;
+  text-decoration: none;
+  color: #2563eb;
+}
+
+/* Responsive tweaks */
+@media (max-width: 700px) {
+  .event-card {
+    grid-template-columns: 1fr;
+  }
+  .poster-ph {
+    height: 160px;
+  }
+}

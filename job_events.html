@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="bn">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>JobGate — Job Events</title>
+    <link rel="stylesheet" href="job_events.css" />
+    <script src="https://code.iconify.design/iconify-icon/2.1.0/iconify-icon.min.js"></script>
+  </head>
+  <body>
+    <!-- Top bar -->
+    <header class="topbar">
+      <div class="topbar-inner">
+        <img src="./JobGate_logo.png" alt="JobGate" class="logo" />
+
+        <div class="search-wrap" role="search">
+          <iconify-icon
+            icon="mdi:magnify"
+            class="sicon"
+            aria-hidden="true"
+          ></iconify-icon>
+          <input
+            type="text"
+            placeholder="Search JobGate"
+            aria-label="Search JobGate"
+          />
+        </div>
+
+        <nav class="top-actions" aria-label="Top actions">
+          <a href="home.html" class="tlink">Home</a>
+          <a href="#" class="tlink">Profile</a>
+          <img
+            src="./avatar_placeholder.jpg"
+            class="avatar"
+            alt="User avatar"
+          />
+        </nav>
+      </div>
+    </header>
+
+    <div class="layout">
+      <!-- Sidebar -->
+      <aside class="sidebar">
+        <button class="sbtn">
+          <iconify-icon icon="mdi:home" class="sib"></iconify-icon>Feed
+        </button>
+        <button class="sbtn">
+          <iconify-icon
+            icon="mdi:lightbulb-on-outline"
+            class="sib"
+          ></iconify-icon
+          >Career Tips
+        </button>
+        <button class="sbtn active">
+          <iconify-icon icon="mdi:calendar-star" class="sib"></iconify-icon>Job
+          Events
+        </button>
+        <button class="sbtn">
+          <iconify-icon icon="mdi:book-open-variant" class="sib"></iconify-icon
+          >Courses
+        </button>
+        <button class="sbtn">
+          <iconify-icon
+            icon="mdi:account-check-outline"
+            class="sib"
+          ></iconify-icon
+          >Skill Assessment
+        </button>
+        <button class="sbtn">
+          <iconify-icon icon="mdi:briefcase-outline" class="sib"></iconify-icon
+          >Jobs
+        </button>
+        <div class="spacer"></div>
+        <button class="sbtn logout">
+          <iconify-icon icon="mdi:logout" class="sib"></iconify-icon>Log out
+        </button>
+      </aside>
+
+      <!-- Main -->
+      <main class="content">
+        <h2 class="page-title">Events</h2>
+
+        <!-- Top CTA + Filters -->
+        <div class="toolbar">
+          <a
+            class="btn-primary"
+            href="#"
+            onclick="alert('Example: open your event checker / calendar'); return false;"
+          >
+            <iconify-icon icon="mdi:calendar-search"></iconify-icon>
+            Check Event
+          </a>
+
+          <div class="filters" role="tablist" aria-label="Event filters">
+            <button class="chip active" data-filter="all">All</button>
+            <button class="chip" data-filter="job-fair">Job fair</button>
+            <button class="chip" data-filter="internship-fair">
+              Internship fair
+            </button>
+          </div>
+        </div>
+
+        <!-- Events grid -->
+        <section class="events-grid" id="eventsGrid">
+          <!-- Card 1 -->
+          <article class="event-card" data-type="job-fair" data-id="ev1">
+            <div class="poster">
+              <div class="poster-ph">Poster</div>
+            </div>
+            <div class="event-body">
+              <h3 class="event-title">
+                Yakima Development Association Job Fair 2025
+              </h3>
+              <p class="event-snippet">
+                20–22 June 2025 • Yakima County. Meet recruiters, attend
+                sessions, and explore job openings.
+              </p>
+              <a
+                class="details"
+                href="job_event_details.html?eventId=ev1"
+                target="_blank"
+                >View Details</a
+              >
+            </div>
+          </article>
+
+          <!-- Card 2 -->
+          <article class="event-card" data-type="job-fair" data-id="ev2">
+            <div class="poster">
+              <div class="poster-ph">Poster</div>
+            </div>
+            <div class="event-body">
+              <h3 class="event-title">UIU CODERS COMBAT 4.0</h3>
+              <p class="event-snippet">
+                The ultimate battleground for coders. Solve challenges, learn,
+                and network with tech leaders.
+              </p>
+              <a
+                class="details"
+                href="job_event_details.html?eventId=ev2"
+                target="_blank"
+                >View Details</a
+              >
+            </div>
+          </article>
+
+          <!-- Card 3 -->
+          <article class="event-card" data-type="job-fair" data-id="ev3">
+            <div class="poster">
+              <div class="poster-ph">Poster</div>
+            </div>
+            <div class="event-body">
+              <h3 class="event-title">IEEE PES Day 2025 — UIU</h3>
+              <p class="event-snippet">
+                Celebrate innovation in power & energy systems. Talks,
+                workshops, competitions.
+              </p>
+              <a
+                class="details"
+                href="job_event_details.html?eventId=ev3"
+                target="_blank"
+                >View Details</a
+              >
+            </div>
+          </article>
+
+          <!-- Card 4 -->
+          <article class="event-card" data-type="internship-fair" data-id="ev4">
+            <div class="poster">
+              <div class="poster-ph">Poster</div>
+            </div>
+            <div class="event-body">
+              <h3 class="event-title">
+                Campo wave 2025 — Online Internship Job Fair
+              </h3>
+              <p class="event-snippet">
+                10–20 December. Mock interviews, career counseling, and
+                networking from home.
+              </p>
+              <a
+                class="details"
+                href="job_event_details.html?eventId=ev4"
+                target="_blank"
+                >View Details</a
+              >
+            </div>
+          </article>
+        </section>
+      </main>
+    </div>
+
+    <script>
+      // Simple front-end filtering
+      const chips = document.querySelectorAll(".chip");
+      const cards = document.querySelectorAll(".event-card");
+      chips.forEach((chip) => {
+        chip.addEventListener("click", () => {
+          chips.forEach((c) => c.classList.remove("active"));
+          chip.classList.add("active");
+          const f = chip.dataset.filter;
+          cards.forEach((card) => {
+            const type = card.dataset.type;
+            card.style.display = f === "all" || f === type ? "" : "none";
+          });
+        });
+      });
+    </script>
+  </body>
+</html>
