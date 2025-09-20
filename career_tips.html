@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="bn">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>JobGate — Career Tips</title>
+    <link rel="stylesheet" href="career_tips.css" />
+    <script src="https://code.iconify.design/iconify-icon/2.1.0/iconify-icon.min.js"></script>
+  </head>
+  <body>
+    <!-- Topbar -->
+    <header class="topbar">
+      <div class="topbar-inner">
+        <img src="./JobGate_logo.png" alt="JobGate" class="logo" />
+        <div class="search-wrap">
+          <iconify-icon icon="mdi:magnify" class="sicon"></iconify-icon>
+          <input type="text" placeholder="Search JobGate" />
+        </div>
+        <nav class="top-actions">
+          <a href="home.html" class="tlink">Home</a>
+          <a href="#" class="tlink">Profile</a>
+          <img src="./avatar_placeholder.jpg" class="avatar" />
+        </nav>
+      </div>
+    </header>
+
+    <div class="layout">
+      <!-- Sidebar -->
+      <aside class="sidebar">
+        <button class="sbtn">
+          <iconify-icon icon="mdi:home" class="sib"></iconify-icon>Feed
+        </button>
+        <button class="sbtn active">
+          <iconify-icon
+            icon="mdi:lightbulb-on-outline"
+            class="sib"
+          ></iconify-icon
+          >Career Tips
+        </button>
+        <button class="sbtn">
+          <iconify-icon icon="mdi:calendar-star" class="sib"></iconify-icon>Job
+          Events
+        </button>
+        <button class="sbtn">
+          <iconify-icon icon="mdi:book-open-variant" class="sib"></iconify-icon
+          >Courses
+        </button>
+        <button class="sbtn">
+          <iconify-icon
+            icon="mdi:account-check-outline"
+            class="sib"
+          ></iconify-icon
+          >Skill Assessment
+        </button>
+        <button class="sbtn">
+          <iconify-icon icon="mdi:briefcase-outline" class="sib"></iconify-icon
+          >Jobs
+        </button>
+        <div class="spacer"></div>
+        <button class="sbtn logout">
+          <iconify-icon icon="mdi:logout" class="sib"></iconify-icon>Log out
+        </button>
+      </aside>
+
+      <!-- Main Content -->
+      <main class="content">
+        <h2 class="section-title">Career Advice</h2>
+        <p class="intro">Explore career tips by category, curated for you.</p>
+
+        <!-- Example Category: Most Popular -->
+        <section class="tips-section">
+          <h3 class="sub-title">Most Popular</h3>
+          <div class="tips-grid">
+            <article class="tip-card">
+              <img src="./career1.jpg" alt="Career Tip" />
+              <div class="tip-body">
+                <p class="author">BY JOHN DOE</p>
+                <h4>How to Write a Winning Resume</h4>
+                <p class="desc">
+                  Learn proven strategies to stand out in your resume and
+                  attract top employers.
+                </p>
+                <span class="tag">RESUME</span>
+              </div>
+            </article>
+            <article class="tip-card">
+              <img src="./career2.jpg" alt="Career Tip" />
+              <div class="tip-body">
+                <p class="author">BY JANE SMITH</p>
+                <h4>Interview Mistakes You Must Avoid</h4>
+                <p class="desc">
+                  From body language to tough questions — here’s how to ace your
+                  interview.
+                </p>
+                <span class="tag">INTERVIEW</span>
+              </div>
+            </article>
+          </div>
+        </section>
+
+        <!-- Example Category: In the News -->
+        <section class="tips-section">
+          <h3 class="sub-title">In the News</h3>
+          <div class="tips-grid">
+            <article class="tip-card">
+              <img src="./career3.jpg" alt="Career Tip" />
+              <div class="tip-body">
+                <p class="author">BY EDITORIAL TEAM</p>
+                <h4>AI is Changing Careers: What You Need to Know</h4>
+                <p class="desc">
+                  Discover how AI is reshaping industries and what skills will
+                  be in demand.
+                </p>
+                <span class="tag">TECH</span>
+              </div>
+            </article>
+          </div>
+        </section>
+      </main>
+    </div>
+  </body>
+</html>
