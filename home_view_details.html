@@ -4,33 +4,53 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>JobGate — Job Details</title>
-    <link rel="stylesheet" href="featured_job_details.css" />
+    <link rel="stylesheet" href="home_view_details.css" />
     <script src="https://code.iconify.design/iconify-icon/2.1.0/iconify-icon.min.js"></script>
   </head>
   <body>
     <!-- Top bar (same visual rhythm) -->
     <header class="topbar">
-  <div class="topbar-inner">
-    <img src="./JobGate_logo.png" alt="JobGate" class="logo" />
+      <div class="topbar-inner">
+        <img src="./JobGate_logo.png" alt="JobGate" class="logo" />
 
-    <div class="search-wrap" role="search">
-      <iconify-icon icon="mdi:magnify" class="sicon" aria-hidden="true"></iconify-icon>
-      <input type="text" placeholder="Search JobGate" aria-label="Search JobGate" />
-    </div>
+        <div class="search-wrap" role="search">
+          <iconify-icon
+            icon="mdi:magnify"
+            class="sicon"
+            aria-hidden="true"
+          ></iconify-icon>
+          <input
+            type="text"
+            placeholder="Search JobGate"
+            aria-label="Search JobGate"
+          />
+        </div>
 
-    <nav class="top-actions" aria-label="Top actions">
-      <a href="home.html" class="tlink">
-        <iconify-icon icon="mdi:home-variant" width="20" height="20"></iconify-icon>
-        Home
-      </a>
-      <a href="#" class="tlink">
-        <iconify-icon icon="mdi:account" width="20" height="20"></iconify-icon>
-        Profile
-      </a>
-      <img src="./avatar_placeholder.jpg" class="avatar" alt="User avatar" />
-    </nav>
-  </div>
-</header>
+        <nav class="top-actions" aria-label="Top actions">
+          <a href="home.html" class="tlink">
+            <iconify-icon
+              icon="mdi:home-variant"
+              width="20"
+              height="20"
+            ></iconify-icon>
+            Home
+          </a>
+          <a href="#" class="tlink">
+            <iconify-icon
+              icon="mdi:account"
+              width="20"
+              height="20"
+            ></iconify-icon>
+            Profile
+          </a>
+          <img
+            src="./avatar_placeholder.jpg"
+            class="avatar"
+            alt="User avatar"
+          />
+        </nav>
+      </div>
+    </header>
 
     <main class="wrap">
       <a class="back" href="home.html">
@@ -43,7 +63,9 @@
         <div class="desc">
           <!-- সব কনটেন্ট placeholder—পরে DB থেকে বসবে -->
           <h2 id="jobTitle">[Job Title] — [Company]</h2>
-          <p class="meta" id="jobMeta">Location: [City] (Hybrid) · Type: Full-time</p>
+          <p class="meta" id="jobMeta">
+            Location: [City] (Hybrid) · Type: Full-time
+          </p>
 
           <h3>Description</h3>
           <p id="jobDesc">
@@ -72,25 +94,33 @@
 
       // Placeholder mapping (replace with DB fetch later)
       const demo = {
-        "123": {
+        123: {
           title: "[Creative Video Maker & Editor] — [iStock Media]",
           meta: "Location: Dhaka (Hybrid) · Type: Full-time",
           desc: "We are seeking a talented and creative Video Maker & Editor...",
-          req: ["Premiere Pro / After Effects", "CapCut basics", "Storytelling"]
+          req: [
+            "Premiere Pro / After Effects",
+            "CapCut basics",
+            "Storytelling",
+          ],
         },
-        "456": {
+        456: {
           title: "[Junior Software Engineer] — [Loreem Tech Solutions]",
           meta: "Location: Dhaka · Type: Entry-level",
           desc: "Looking for a passionate JSE with strong problem-solving skills...",
-          req: ["HTML/CSS/JS", "PHP/MySQL basics", "Teamwork & learning mindset"]
-        }
+          req: [
+            "HTML/CSS/JS",
+            "PHP/MySQL basics",
+            "Teamwork & learning mindset",
+          ],
+        },
       };
 
       const data = demo[jobId] || {
         title: "[Job Title] — [Company]",
         meta: "Location: [City] · Type: [Type]",
         desc: "Full description placeholder…",
-        req: ["Requirement A", "Requirement B", "Requirement C"]
+        req: ["Requirement A", "Requirement B", "Requirement C"],
       };
 
       // Render placeholders
