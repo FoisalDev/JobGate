@@ -28,7 +28,7 @@
 
         <nav class="top-actions" aria-label="Top actions">
           <a href="home.html" class="tlink">Home</a>
-          <a href="#" class="tlink">Profile</a>
+          <a href="profile.html" class="tlink">Profile</a>
           <img
             src="./avatar_placeholder.jpg"
             class="avatar"
@@ -41,10 +41,10 @@
     <div class="layout">
       <!-- Sidebar -->
       <aside class="sidebar">
-        <button class="sbtn">
+        <button class="sbtn" onclick="window.location.href='home.html'">
           <iconify-icon icon="mdi:home" class="sib"></iconify-icon>Feed
         </button>
-        <button class="sbtn">
+        <button class="sbtn" onclick="window.location.href='career_tips.html'">
           <iconify-icon
             icon="mdi:lightbulb-on-outline"
             class="sib"
@@ -55,23 +55,26 @@
           <iconify-icon icon="mdi:calendar-star" class="sib"></iconify-icon>Job
           Events
         </button>
-        <button class="sbtn">
+        <button class="sbtn" onclick="window.location.href='courses.html'">
           <iconify-icon icon="mdi:book-open-variant" class="sib"></iconify-icon
           >Courses
         </button>
-        <button class="sbtn">
+        <button
+          class="sbtn"
+          onclick="window.location.href='skill_assessment.html'"
+        >
           <iconify-icon
             icon="mdi:account-check-outline"
             class="sib"
           ></iconify-icon
           >Skill Assessment
         </button>
-        <button class="sbtn">
+        <button class="sbtn" onclick="window.location.href='jobs.html'">
           <iconify-icon icon="mdi:briefcase-outline" class="sib"></iconify-icon
           >Jobs
         </button>
         <div class="spacer"></div>
-        <button class="sbtn logout">
+        <button class="sbtn logout" onclick="window.location.href='login.html'">
           <iconify-icon icon="mdi:logout" class="sib"></iconify-icon>Log out
         </button>
       </aside>
