@@ -9,84 +9,86 @@ if (!is_logged_in()) {
 }
 
 // Get user info from session
-$user_id = $_SESSION['user_id'];
+$user_id   = $_SESSION['user_id'];
 $user_type = $_SESSION['user_type'];
 $full_name = $_SESSION['full_name'];
 
-// Define redirection based on user type
+// Admin route
 if ($user_type === 'admin') {
-    // Admin needs a separate file
-    redirect('admin_dashboard.php'); 
-} 
-
-// ✅ NEW: Determine profile page based on user type
-$profilePage = ($user_type === 'recruiter') ? 'recruiter_profile.php' : 'profile.php';
-
-// If Recruiter or Applicant, they see this feed for now.
-$is_applicant = ($user_type === 'applicant');
-
-// Function to fetch featured jobs from the database
-function get_featured_jobs($conn) {
-    // Select featured jobs, joining Recruiters (r) and their corresponding Users entry (c) to get company info.
-    $sql = "SELECT 
-                j.job_id, 
-                j.job_title, 
-                j.short_description, 
-                j.job_type, 
-                j.location,
-                c.full_name AS company_name, 
-                r.logo_url 
-            FROM Jobs j
-            JOIN Recruiters r ON j.recruiter_id = r.recruiter_id
-            JOIN Users c ON r.user_id = c.user_id
-            WHERE j.is_featured = 1
-            ORDER BY j.posted_date DESC 
-            LIMIT 5";
-            
-    $result = $conn->query($sql);
-
-    if ($result && $result->num_rows > 0) {
-        return $result->fetch_all(MYSQLI_ASSOC);
-    }
-    return [];
+    redirect('admin_dashboard.php');
 }
 
-$featured_jobs = get_featured_jobs($conn);
+// ✅ Profile page by role (unchanged)
+$profilePage = ($user_type === 'recruiter') ? 'recruiter_profile.php' : 'profile.php';
 
-// Helper function to render job cards
+// Helper to trim description
+function excerpt($text, $len = 180) {
+    $text = strip_tags($text ?? '');
+    if (mb_strlen($text) <= $len) return $text;
+    return mb_substr($text, 0, $len - 1) . '…';
+}
+
+// ✅ Fetch latest jobs based on your schema (no is_featured/job_title/short_description)
+function get_featured_jobs($conn, $limit = 10) {
+  $sql = "SELECT 
+  j.job_id,
+  j.title,
+  j.description,
+  j.type,
+  j.location,
+  j.posted_at,
+  u.full_name AS company_name,
+  COALESCE(j.job_logo_url, r.company_logo_url) AS logo_url
+FROM Jobs j
+JOIN Recruiters r ON j.recruiter_id = r.recruiter_id
+JOIN Users u      ON r.user_id = u.user_id
+ORDER BY j.posted_at DESC
+LIMIT ?";
+
+    $stmt = $conn->prepare($sql);
+    $stmt->bind_param("i", $limit);
+    $stmt->execute();
+    $res = $stmt->get_result();
+    $rows = $res->fetch_all(MYSQLI_ASSOC);
+    $stmt->close();
+    return $rows ?: [];
+}
+
+$featured_jobs = get_featured_jobs($conn, 10);
+
+// Helper function to render job cards (keep layout)
 function render_job_card($job) {
-    $job_id = htmlspecialchars($job['job_id']);
-    $title = htmlspecialchars($job['job_title']);
-    $company = htmlspecialchars($job['company_name']);
+    $job_id   = htmlspecialchars($job['job_id']);
+    $title    = htmlspecialchars($job['title']);
+    $company  = htmlspecialchars($job['company_name']);
     $location = htmlspecialchars($job['location']);
-    $type = htmlspecialchars($job['job_type']);
-    $desc = htmlspecialchars($job['short_description']);
-    $logo = htmlspecialchars($job['logo_url'] ?? './avatar_placeholder.jpg'); 
+    $type     = htmlspecialchars($job['type']);
+    $desc     = htmlspecialchars(excerpt($job['description'], 200));
+    $logo     = htmlspecialchars($job['logo_url'] ?: './avatar_placeholder.jpg');
+    $posted   = !empty($job['posted_at']) ? date('M d, Y', strtotime($job['posted_at'])) : '';
 
-    // Details link points to job_details.php
-    $details_link = "job_details.php?jobId=" . $job_id; 
+    // Open in dedicated page
+    $details_link = "home_view_details.php?jobId=" . $job_id;
 
+    // Keep your original structure, only image box tuned for 2:1 ratio and consistent sizing
     $output = "
         <article class='job-card' data-job-id='{$job_id}'>
             <div class='job-left'>
                 <div class='poster placeholder'>
-                    <img src='{$logo}' alt='{$company} Logo' style='width: 80%; height: auto; border-radius: 8px;' onerror=\"this.style.display='none';\">
-                    <span style='color: #64748b; font-weight: 700;'>Poster/Logo</span>
+                    <img src='{$logo}' alt='{$company} Logo' class='job-poster' onerror=\"this.src='./avatar_placeholder.jpg';\">
+                    <span class='poster-label'>Poster/Logo</span>
                 </div>
             </div>
             <div class='job-right'>
                 <h3 class='job-title'>{$title} — {$company}</h3>
                 <div class='meta'>
                     <span>Location: {$location}</span> ·
-                    <span>Type: {$type}</span>
-                </div>
+                    <span>Type: {$type}</span>".
+                    (!empty($posted) ? " · <span>Posted: {$posted}</span>" : "") .
+                "</div>
                 <div class='short-desc'><p>{$desc}</p></div>
 
-                <a
-                    class='view-details'
-                    href='{$details_link}'
-                    target='_blank'
-                >
+                <a class='view-details' href='{$details_link}' target='_blank' rel='noopener'>
                     <iconify-icon icon='mdi:eye-outline'></iconify-icon> view details
                 </a>
             </div>
@@ -103,6 +105,47 @@ function render_job_card($job) {
     <title>JobGate — Home</title>
     <link rel="stylesheet" href="home.css" />
     <script src="https://code.iconify.design/iconify-icon/2.1.0/iconify-icon.min.js"></script>
+
+    <!-- 🔧 Minimal CSS tweaks ONLY; layout kept intact -->
+    <style>
+      /* keep header/left layout intact; just ensure sidebar stays fixed and feed scrolls */
+      .sidebar{ position: sticky; top: 80px; } /* left button side div stays fixed relative to viewport after header */
+      
+      /* Featured list scrollable container */
+      .featured-scroll {
+        max-height: 520px;   /* adjust as you like */
+        overflow-y: auto;
+        padding-right: 6px;  /* little space for scrollbar */
+      }
+      .featured-scroll::-webkit-scrollbar { width: 8px; }
+      .featured-scroll::-webkit-scrollbar-thumb { background:#cbd5e1; border-radius: 8px; }
+
+      /* Poster box ratio fix: width is ~2x height, image covers nicely */
+      .job-left .poster {
+        width: 260px;           /* width ~ 2x height */
+        height: 130px;          /* 2:1 ratio */
+        display:flex; align-items:center; justify-content:center;
+        background:#f8fafc; border-radius: 10px; position: relative;
+        overflow: hidden;
+      }
+      .job-left .poster .job-poster {
+        width: 100%; height: 100%;
+        object-fit: cover;      /* no stretching, always fills 2:1 box */
+        display:block;
+      }
+      .poster-label{
+        position:absolute; bottom:6px; left:8px; 
+        color:#64748b; font-weight:700; font-size:12px; 
+        background: rgba(255,255,255,0.7); padding:2px 6px; border-radius:6px;
+      }
+
+      /* Make sure cards keep your original look */
+      .job-card{ display:flex; gap:14px; background:#fff; border:1px solid #e5e7eb; border-radius:12px; padding:14px; margin-bottom:12px; }
+      .job-right{ flex:1; }
+      .job-title{ margin:0 0 6px; }
+      .meta{ color:#475569; margin-bottom:8px; }
+      .view-details{ display:inline-flex; align-items:center; gap:6px; border:1px solid #cbd5e1; padding:8px 10px; border-radius:10px; text-decoration:none; color:#0f172a; }
+    </style>
   </head>
   <body>
     <!-- Top bar -->
@@ -125,7 +168,7 @@ function render_job_card($job) {
     </header>
 
     <div class="layout">
-      <!-- Sidebar -->
+      <!-- Sidebar (unchanged) -->
       <aside class="sidebar">
         <button class="sbtn active">
           <iconify-icon icon="mdi:home" class="sib"></iconify-icon>Feed
@@ -165,18 +208,20 @@ function render_job_card($job) {
 
       <!-- Main feed -->
       <main class="content">
-        <h2 class="section-title">Featured Jobs (Top <?php echo count($featured_jobs); ?>)</h2>
+        <h2 class="section-title">Featured Jobs (Latest <?php echo count($featured_jobs); ?>)</h2>
 
-        <!-- Dynamic Job Cards -->
-        <?php if (!empty($featured_jobs)): ?>
-            <?php foreach ($featured_jobs as $job): ?>
-                <?php echo render_job_card($job); ?>
-            <?php endforeach; ?>
-        <?php else: ?>
-            <p style="padding: 20px; text-align: center; background: #fff; border-radius: 10px; margin-top: 20px; box-shadow: 0 4px 10px rgba(0,0,0,.05);">
-              No featured jobs available right now. Check back later!
-            </p>
-        <?php endif; ?>
+        <!-- ✅ Scrollable featured jobs list; layout unchanged -->
+        <div class="featured-scroll">
+          <?php if (!empty($featured_jobs)): ?>
+              <?php foreach ($featured_jobs as $job): ?>
+                  <?php echo render_job_card($job); ?>
+              <?php endforeach; ?>
+          <?php else: ?>
+              <p style="padding: 20px; text-align: center; background: #fff; border-radius: 10px; margin-top: 20px; box-shadow: 0 4px 10px rgba(0,0,0,.05);">
+                No jobs available right now. Check back later!
+              </p>
+          <?php endif; ?>
+        </div>
 
       </main>
     </div>
