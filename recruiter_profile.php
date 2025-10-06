@@ -1,5 +1,5 @@
 <?php
-// recruiter_profile.php — STRICT to jobgate.sql + fixed navbar overlap
+// recruiter_profile.php — save per-job image if column exists (job_logo_url)
 require_once 'db_connect.php';
 session_start();
 
@@ -23,7 +23,7 @@ if (!function_exists('guid')) {
 }
 if (!function_exists('GUID')) { function GUID(){ return guid(); } }
 
-/* Guards */
+/* Guard */
 if (!is_logged_in()) { redirect('login.php'); exit; }
 if ($_SESSION['user_type'] !== 'recruiter') { redirect('home.php'); exit; }
 
@@ -33,7 +33,22 @@ $full_name = $_SESSION['full_name'] ?? 'Recruiter';
 $message = '';
 $message_type = '';
 
-/* Map Users.user_id -> Recruiters.recruiter_id */
+/* Utility: check if a column exists */
+function column_exists($conn, $table, $column) {
+  $sql = "SELECT COUNT(*) c
+          FROM INFORMATION_SCHEMA.COLUMNS
+          WHERE TABLE_SCHEMA = DATABASE()
+            AND TABLE_NAME = ?
+            AND COLUMN_NAME = ?";
+  $st = $conn->prepare($sql);
+  $st->bind_param("ss", $table, $column);
+  $st->execute();
+  $row = $st->get_result()->fetch_assoc();
+  $st->close();
+  return !empty($row['c']);
+}
+
+/* Map user -> recruiter */
 $recruiter_id = null;
 $existing_logo = null;
 try {
@@ -51,12 +66,13 @@ try {
   $message_type = 'error';
 }
 
-/* POST: Create job (STRICT to jobgate.sql) */
+/* POST: Create job (strict to jobgate.sql, +optional job_logo_url) */
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ( $_POST['action'] ?? '' ) === 'post_job') {
   try {
     if (!$recruiter_id) throw new Exception("No recruiter profile found for this user.");
 
-    // Optional: update recruiter company logo (Jobs table has no logo column)
+    /* 1) Handle image upload (one file used for both company logo and per-job logo) */
+    $job_logo_url = null; // <-- will save into Jobs.job_logo_url if that column exists
     if (!empty($_FILES['logo']['name']) && $_FILES['logo']['error'] === UPLOAD_ERR_OK) {
       $dir_fs  = __DIR__ . '/uploads/job_logos/';
       $dir_web = 'uploads/job_logos/';
@@ -73,22 +89,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ( $_POST['action'] ?? '' ) === 'pos
       if (!move_uploaded_file($_FILES['logo']['tmp_name'], $dir_fs.$fname)) {
         throw new Exception("Failed to move uploaded file. Check folder permissions.");
       }
-      $logo_url = $dir_web.$fname;
+      $uploaded_url = $dir_web.$fname;
 
-      // Save to Recruiters.company_logo_url
+      // Update company logo (so your brand shows elsewhere)
       $stUp = $conn->prepare("UPDATE Recruiters SET company_logo_url = ? WHERE recruiter_id = ?");
-      $stUp->bind_param("ss", $logo_url, $recruiter_id);
+      $stUp->bind_param("ss", $uploaded_url, $recruiter_id);
       $stUp->execute(); $stUp->close();
-      $existing_logo = $logo_url;
+      $existing_logo = $uploaded_url;
+
+      // Also remember for this specific job (if column exists)
+      $job_logo_url = $uploaded_url;
     }
 
-    // Inputs for Jobs (as per jobgate.sql)
+    /* 2) Gather fields (schema exact) */
     $job_id     = GUID();
     $title      = sanitize_input($_POST['title'] ?? '');
     $job_role   = sanitize_input($_POST['job_role'] ?? '');
     $sector_id  = sanitize_input($_POST['sector_id'] ?? '');
     $location   = sanitize_input($_POST['location'] ?? '');
-    $type       = sanitize_input($_POST['type'] ?? 'Full-time'); // ENUM('Full-time','Part-time','Contract','Internship')
+    $type       = sanitize_input($_POST['type'] ?? 'Full-time'); // ENUM
     $salary_min = (int)($_POST['salary_min'] ?? 0);
     $salary_max = (int)($_POST['salary_max'] ?? 0);
     $description= sanitize_input($_POST['description'] ?? '');
@@ -105,21 +124,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ( $_POST['action'] ?? '' ) === 'pos
       throw new Exception("Salary max cannot be less than salary min.");
     }
 
+    /* 3) Build INSERT dynamically if job_logo_url exists */
+    $has_job_logo = column_exists($conn, 'Jobs', 'job_logo_url');
+
     $conn->begin_transaction();
 
-    // INSERT into Jobs (exact columns)
-    $sql = "INSERT INTO Jobs
-            (job_id, recruiter_id, sector_id, title, job_role, location, type, salary_min, salary_max, description, requirements, application_deadline)
-            VALUES (?,?,?,?,?,?,?,?,?,?,?,?)";
+    $fields = ['job_id','recruiter_id','sector_id','title','job_role','location','type','salary_min','salary_max','description','requirements','application_deadline'];
+    $place  = ['?','?','?','?','?','?','?','?','?','?','?','?'];
+    $types  = 'sssssssiisss'; // s(7) i i s s s  => total 12 types
+    $params = [$job_id,$recruiter_id,$sector_id,$title,$job_role,$location,$type,$salary_min,$salary_max,$description,$requirements,$application_deadline];
+
+    if ($has_job_logo) {
+      $fields[] = 'job_logo_url';
+      $place[]  = '?';
+      $types   .= 's';
+      $params[] = $job_logo_url; // can be NULL if not uploaded this time
+    }
+
+    $sql = "INSERT INTO Jobs (".implode(',', $fields).") VALUES (".implode(',', $place).")";
     $stmt = $conn->prepare($sql);
-    $stmt->bind_param(
-      "ssssssssisss",
-      $job_id, $recruiter_id, $sector_id, $title, $job_role, $location, $type, $salary_min, $salary_max, $description, $requirements, $application_deadline
-    );
+    $stmt->bind_param($types, ...$params);
     $stmt->execute();
     $stmt->close();
 
-    // Optional assessment mapping (JobAssessmentRequirements has ONLY (job_id, assessment_id))
+    /* 4) Optional assessment mapping (JobAssessmentRequirements: job_id, assessment_id) */
     $assessment_id = sanitize_input($_POST['assessment_id'] ?? '');
     if ($assessment_id !== '') {
       $st2 = $conn->prepare("INSERT INTO JobAssessmentRequirements (job_id, assessment_id) VALUES (?, ?)");
@@ -154,7 +182,7 @@ try {
   $q->close();
 } catch (Throwable $e) {}
 
-/* History — posted_at & application_deadline */
+/* History */
 $job_history = [];
 try {
   if ($recruiter_id) {
@@ -183,40 +211,24 @@ try {
   <link rel="stylesheet" href="recruiter_profile.css" />
   <script src="https://code.iconify.design/iconify-icon/2.1.0/iconify-icon.min.js"></script>
   <style>
-    /* === FIXED, CONSISTENT NAVBAR === */
-    .topbar{
-      position: sticky; top:0; z-index: 2000;
-      background:#ffffff; border-bottom:1px solid #e5e7eb;
-    }
-    .topbar-inner{
-      max-width: 1120px; margin:0 auto; padding:10px 16px;
-      display:flex; align-items:center; justify-content:space-between; gap:16px;
-      pointer-events: auto;
-    }
+    .topbar{ position: sticky; top:0; z-index: 2000; background:#ffffff; border-bottom:1px solid #e5e7eb; }
+    .topbar-inner{ max-width: 1120px; margin:0 auto; padding:10px 16px; display:flex; align-items:center; justify-content:space-between; gap:16px; }
     .brand{ display:flex; align-items:center; text-decoration:none }
     .logo{ height:40px; display:block }
     .top-actions{ display:flex; align-items:center; gap:16px }
-    .tlink{
-      display:inline-block; padding:8px 10px; border-radius:8px;
-      color:#0f172a; text-decoration:none; font-weight:600;
-    }
+    .tlink{ display:inline-block; padding:8px 10px; border-radius:8px; color:#0f172a; text-decoration:none; font-weight:600; }
     .tlink:hover{ background:#f1f5f9 }
     .user-name{ color:#334155; font-weight:600 }
     .avatar{ width:36px; height:36px; border-radius:9999px; display:block }
 
-    /* Layout: ensure sidebar never overlaps topbar */
     .layout{ max-width:1120px; margin:20px auto; padding:0 16px; display:flex; gap:18px; position: relative; z-index: 1; }
-    .sidebar{
-      width:230px; background:#fff; border:1px solid #e5e7eb; border-radius:12px; padding:12px;
-      position: sticky; top:72px; z-index: 1;  /* LOWER than topbar (2000) */
-    }
-    .sbtn{ display:flex; align-items:center; gap:8px; padding:10px; border-radius:10px;
-           color:#0f172a; text-decoration:none; border:0; background:#f8fafc; margin-bottom:8px }
+    .sidebar{ width:230px; background:#fff; border:1px solid #e5e7eb; border-radius:12px; padding:12px;
+      position: sticky; top:72px; z-index: 1; }
+    .sbtn{ display:flex; align-items:center; gap:8px; padding:10px; border-radius:10px; color:#0f172a; text-decoration:none; border:0; background:#f8fafc; margin-bottom:8px }
     .sbtn.active{ background:#e2e8f0 }
     .sbtn.logout{ background:#fee2e2; color:#991b1b }
     .content{ flex:1 }
 
-    /* Cards */
     .profile-head{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:18px;margin-bottom:16px}
     .job-post-card,.history-card{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:18px;margin-bottom:16px}
     .form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
@@ -229,13 +241,10 @@ try {
     .history-item{display:flex;align-items:center;justify-content:space-between;border:1px solid #e5e7eb;border-radius:10px;padding:12px}
     .job-title{font-weight:700}
     .text-muted{color:#64748b}
-
-    /* Prevent any accidental overlay clicks */
-    header.topbar, header.topbar * { pointer-events: auto; }
   </style>
 </head>
 <body>
-  <!-- Top bar (same structure as other pages) -->
+  <!-- Top bar -->
   <header class="topbar">
     <div class="topbar-inner">
       <a href="home.php" class="brand">
@@ -253,19 +262,11 @@ try {
   <div class="layout">
     <!-- Sidebar -->
     <aside class="sidebar">
-      <a class="sbtn" href="home.php">
-        <iconify-icon icon="mdi:view-dashboard"></iconify-icon>Dashboard
-      </a>
-      <a class="sbtn active" href="recruiter_profile.php">
-        <iconify-icon icon="mdi:briefcase-edit-outline"></iconify-icon>Post Job
-      </a>
-      <a class="sbtn" href="jobs.php">
-        <iconify-icon icon="mdi:account-group-outline"></iconify-icon>View Applicants
-      </a>
+      <a class="sbtn" href="home.php"><iconify-icon icon="mdi:view-dashboard"></iconify-icon>Dashboard</a>
+      <a class="sbtn active" href="recruiter_profile.php"><iconify-icon icon="mdi:briefcase-edit-outline"></iconify-icon>Post Job</a>
+      <a class="sbtn" href="jobs.php"><iconify-icon icon="mdi:account-group-outline"></iconify-icon>View Applicants</a>
       <div class="spacer"></div>
-      <a class="sbtn logout" href="logout.php">
-        <iconify-icon icon="mdi:logout"></iconify-icon>Log out
-      </a>
+      <a class="sbtn logout" href="logout.php"><iconify-icon icon="mdi:logout"></iconify-icon>Log out</a>
     </aside>
 
     <!-- Main Content -->
@@ -288,26 +289,22 @@ try {
           <input type="hidden" name="action" value="post_job" />
 
           <div class="form-grid">
-            <!-- Title -->
             <div class="form-group">
               <label for="title">Job Title *</label>
               <input type="text" id="title" name="title" required value="<?php echo isset($_POST['title'])?htmlspecialchars($_POST['title']):''; ?>">
             </div>
 
-            <!-- Role -->
             <div class="form-group">
               <label for="job_role">Specific Role/Title</label>
               <input type="text" id="job_role" name="job_role" value="<?php echo isset($_POST['job_role'])?htmlspecialchars($_POST['job_role']):''; ?>">
             </div>
 
-            <!-- Company Logo (saves to Recruiters.company_logo_url) -->
             <div class="form-group">
-              <label for="logo">Company Logo (Max 2MB)</label>
+              <label for="logo">Company/Job Image (Max 2MB)</label>
               <input type="file" id="logo" name="logo" accept="image/*">
-              <small class="text-muted">Saved as your company logo (Jobs table has no logo column).</small>
+              <small class="text-muted">Saved to company logo; if <code>Jobs.job_logo_url</code> exists, also saved per job.</small>
             </div>
 
-            <!-- Sector -->
             <div class="form-group">
               <label for="sector_id">Job Sector *</label>
               <select id="sector_id" name="sector_id" required>
@@ -321,13 +318,11 @@ try {
               </select>
             </div>
 
-            <!-- Location -->
             <div class="form-group">
               <label for="location">Location</label>
               <input type="text" id="location" name="location" value="<?php echo isset($_POST['location'])?htmlspecialchars($_POST['location']):''; ?>">
             </div>
 
-            <!-- Employment Type -->
             <div class="form-group">
               <label for="type">Employment Type *</label>
               <select id="type" name="type" required>
@@ -341,26 +336,22 @@ try {
               </select>
             </div>
 
-            <!-- Salary Min -->
             <div class="form-group">
               <label for="salary_min">Salary Min</label>
               <input type="number" id="salary_min" name="salary_min" min="0" step="100" value="<?php echo isset($_POST['salary_min'])?htmlspecialchars($_POST['salary_min']):'0'; ?>">
             </div>
 
-            <!-- Salary Max -->
             <div class="form-group">
               <label for="salary_max">Salary Max</label>
               <input type="number" id="salary_max" name="salary_max" min="0" step="100" value="<?php echo isset($_POST['salary_max'])?htmlspecialchars($_POST['salary_max']):'0'; ?>">
             </div>
 
-            <!-- Application Deadline -->
             <div class="form-group">
               <label for="application_deadline">Application Deadline *</label>
               <input type="date" id="application_deadline" name="application_deadline" required
                      value="<?php echo isset($_POST['application_deadline'])?htmlspecialchars($_POST['application_deadline']):(isset($_POST['deadline'])?htmlspecialchars($_POST['deadline']):''); ?>">
             </div>
 
-            <!-- Assessment -->
             <div class="form-group form-full">
               <label for="assessment_id">Mandatory Skill Assessment (Optional)</label>
               <select id="assessment_id" name="assessment_id">
@@ -375,13 +366,11 @@ try {
               <small class="text-muted">If selected, candidates must pass (≥ 80) before applying.</small>
             </div>
 
-            <!-- Description -->
             <div class="form-group form-full">
               <label for="description">Job Description *</label>
               <textarea id="description" name="description" rows="5" required><?php echo isset($_POST['description'])?htmlspecialchars($_POST['description']):''; ?></textarea>
             </div>
 
-            <!-- Requirements -->
             <div class="form-group form-full">
               <label for="requirements">Key Requirements / Skills</label>
               <textarea id="requirements" name="requirements" rows="3"><?php echo isset($_POST['requirements'])?htmlspecialchars($_POST['requirements']):''; ?></textarea>
