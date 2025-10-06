@@ -109,7 +109,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 $sectors = [];
 // Check if the database connection object ($conn) is valid before querying
 if ($conn && !$conn->connect_error) {
-    $result = $conn->query("SELECT sector_id, name FROM JobSectors ORDER BY name");
+  $result = $conn->query("SELECT sector_id, sector_name AS name FROM JobSectors ORDER BY name");
     if ($result) {
         while ($row = $result->fetch_assoc()) {
             $sectors[] = $row;
@@ -209,6 +209,14 @@ if ($conn && !$conn->connect_error) {
                 <?= htmlspecialchars($message) ?>
             </div>
         <?php endif; ?>
+        
+        <?php 
+        // --- START DEBUG BLOCK ---
+        if (empty($sectors)) {
+            echo '<div class="alert alert-error" style="margin-bottom: 20px; padding: 15px;"><strong>DEBUG:</strong> No Job Sectors found. Please ensure the "JobSectors" table is populated with data.</div>';
+        }
+        // --- END DEBUG BLOCK ---
+        ?>
 
         <!-- Job Posting Form -->
         <section class="job-post-card">
