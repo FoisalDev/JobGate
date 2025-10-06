@@ -18,9 +18,12 @@ if ($user_type === 'admin') {
     // Admin needs a separate file
     redirect('admin_dashboard.php'); 
 } 
+
+// ✅ NEW: Determine profile page based on user type
+$profilePage = ($user_type === 'recruiter') ? 'recruiter_profile.php' : 'profile.php';
+
 // If Recruiter or Applicant, they see this feed for now.
 $is_applicant = ($user_type === 'applicant');
-
 
 // Function to fetch featured jobs from the database
 function get_featured_jobs($conn) {
@@ -91,10 +94,9 @@ function render_job_card($job) {
     ";
     return $output;
 }
-
 ?>
 <!DOCTYPE html>
-<html lang="en"> <!-- Language changed to English -->
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -108,11 +110,10 @@ function render_job_card($job) {
       <div class="topbar-inner">
         <img src="./JobGate_logo.png" alt="JobGate" class="logo" />
 
-        <!-- Search bar REMOVED as requested -->
-
         <nav class="top-actions" aria-label="Top actions">
           <a href="#" class="tlink">Home</a>
-          <a href="profile.php" class="tlink">Profile</a>
+          <!-- ✅ Dynamic Profile Link -->
+          <a href="<?php echo $profilePage; ?>" class="tlink">Profile</a>
           <img
             src="./avatar_placeholder.jpg"
             class="avatar"
@@ -131,10 +132,7 @@ function render_job_card($job) {
         </button>
 
         <button class="sbtn" onclick="window.location.href='career_tips.php'">
-          <iconify-icon
-            icon="mdi:lightbulb-on-outline"
-            class="sib"
-          ></iconify-icon>
+          <iconify-icon icon="mdi:lightbulb-on-outline" class="sib"></iconify-icon>
           Career Tips
         </button>
 
@@ -148,14 +146,8 @@ function render_job_card($job) {
           Courses
         </button>
 
-        <button
-          class="sbtn"
-          onclick="window.location.href='skill_assessment.php'"
-        >
-          <iconify-icon
-            icon="mdi:account-check-outline"
-            class="sib"
-          ></iconify-icon>
+        <button class="sbtn" onclick="window.location.href='skill_assessment.php'">
+          <iconify-icon icon="mdi:account-check-outline" class="sib"></iconify-icon>
           Skill Assessment
         </button>
 
@@ -166,7 +158,6 @@ function render_job_card($job) {
 
         <div class="spacer"></div>
 
-        <!-- FIX: Changed the button to an anchor tag to ensure proper navigation -->
         <a class="sbtn logout" href="logout.php" style="text-decoration: none;">
           <iconify-icon icon="mdi:logout" class="sib"></iconify-icon>Log out
         </a>
@@ -182,7 +173,9 @@ function render_job_card($job) {
                 <?php echo render_job_card($job); ?>
             <?php endforeach; ?>
         <?php else: ?>
-            <p style="padding: 20px; text-align: center; background: #fff; border-radius: 10px; margin-top: 20px; box-shadow: 0 4px 10px rgba(0,0,0,.05);">No featured jobs available right now. Check back later!</p>
+            <p style="padding: 20px; text-align: center; background: #fff; border-radius: 10px; margin-top: 20px; box-shadow: 0 4px 10px rgba(0,0,0,.05);">
+              No featured jobs available right now. Check back later!
+            </p>
         <?php endif; ?>
 
       </main>

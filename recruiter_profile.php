@@ -5,8 +5,8 @@
 require_once 'db_connect.php';
 
 // Check if user is logged in and is a Recruiter
-if (!isset($_SESSION['user_id']) || $_SESSION['user_type'] !== 'recruiter') {
-    if (isset($_SESSION['user_type']) && $_SESSION['user_type'] === 'applicant') {
+if (!is_logged_in() || $_SESSION['user_type'] !== 'recruiter') {
+    if (is_logged_in() && $_SESSION['user_type'] === 'applicant') {
         redirect('home.php'); // Redirect Applicant to home
     } else {
         redirect('login.php'); // Redirect unauthenticated users to login
@@ -32,20 +32,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         
         // Ensure the upload directory exists
         if (!is_dir($upload_dir)) {
-            mkdir($upload_dir, 0777, true);
+            // Attempt to create the directory recursively with permissions
+            if (!mkdir($upload_dir, 0777, true)) {
+                 $message = "Error creating upload directory. Check folder permissions.";
+                 $message_type = 'error';
+                 $upload_success = false;
+            }
         }
         
-        $file_extension = pathinfo($_FILES['logo']['name'], PATHINFO_EXTENSION);
-        $file_name = GUID() . '.' . $file_extension;
-        $target_file = $upload_dir . $file_name;
-        
-        // Move the uploaded file
-        if (move_uploaded_file($_FILES['logo']['tmp_name'], $target_file)) {
-            $logo_path = $target_file; // Path to save in DB
-        } else {
-            $message = "Error uploading file. Check folder permissions (0777) or file size.";
-            $message_type = 'error';
-            $upload_success = false;
+        if ($upload_success) {
+            $file_extension = pathinfo($_FILES['logo']['name'], PATHINFO_EXTENSION);
+            $allowed_types = ['jpg', 'jpeg', 'png', 'gif'];
+            
+            if (!in_array(strtolower($file_extension), $allowed_types)) {
+                $message = "Invalid file type. Only JPG, PNG, and GIF are allowed.";
+                $message_type = 'error';
+                $upload_success = false;
+            } else {
+                $file_name = GUID() . '.' . $file_extension;
+                $target_file = $upload_dir . $file_name;
+                
+                // Move the uploaded file
+                if (move_uploaded_file($_FILES['logo']['tmp_name'], $target_file)) {
+                    $logo_path = $target_file; // Path to save in DB
+                } else {
+                    $message = "Error moving uploaded file. Check folder permissions (0777).";
+                    $message_type = 'error';
+                    $upload_success = false;
+                }
+            }
         }
     }
 
@@ -73,10 +88,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             $conn->begin_transaction();
             try {
                 // A. Insert into Jobs table (Added logo_path column)
+                // The bind_param needs to match the types exactly. 12 parameters.
                 $stmt = $conn->prepare("INSERT INTO Jobs (job_id, recruiter_id, sector_id, title, job_role, logo_path, job_type, salary, description, requirements, deadline, is_featured) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-                // 12 parameters: 6s (id, rec, sec, title, role, logo), 1s (type), 1i (salary), 3s (desc, req, dead), 1i (featured)
+                
+                // Binding 12 parameters: sssssssisssi (7s, 1i, 3s, 1i)
                 $stmt->bind_param("sssssssisssi", 
                     $job_id, $recruiter_id, $sector_id, $title, $job_role, $logo_path, $type, $salary, $description, $requirements, $deadline, $featured);
+                
                 $stmt->execute();
                 
                 // B. Insert into JobAssessmentRequirements (Link job to assessment - using $conn)
@@ -96,7 +114,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 
             } catch (mysqli_sql_exception $e) {
                 $conn->rollback();
-                $message = "Error posting job: " . $e->getMessage();
+                // We show the exact SQL error during development for quick debugging
+                $message = "Database Error posting job: " . $e->getMessage();
                 $message_type = 'error';
             }
         }
@@ -107,7 +126,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 
 // Fetch Job Sectors for dropdown
 $sectors = [];
-// Check if the database connection object ($conn) is valid before querying
+// Use AS name to match the HTML rendering logic
 if ($conn && !$conn->connect_error) {
   $result = $conn->query("SELECT sector_id, sector_name AS name FROM JobSectors ORDER BY name");
     if ($result) {
@@ -139,6 +158,7 @@ if ($conn && !$conn->connect_error) {
         while ($row = $result->fetch_assoc()) {
             $job_history[] = $row;
         }
+        $stmt->close();
     }
 }
 ?>
@@ -212,7 +232,10 @@ if ($conn && !$conn->connect_error) {
         
         <?php 
         // --- START DEBUG BLOCK ---
-        if (empty($sectors)) {
+        if (empty($sectors) && $conn->connect_error) {
+             echo '<div class="alert alert-error" style="margin-bottom: 20px; padding: 15px;"><strong>FATAL DEBUG:</strong> Database Connection Failed.</div>';
+        }
+        if (empty($sectors) && !$conn->connect_error) {
             echo '<div class="alert alert-error" style="margin-bottom: 20px; padding: 15px;"><strong>DEBUG:</strong> No Job Sectors found. Please ensure the "JobSectors" table is populated with data.</div>';
         }
         // --- END DEBUG BLOCK ---
