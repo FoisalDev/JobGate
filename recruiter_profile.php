@@ -1,15 +1,15 @@
 <?php
-// recruiter_profile.php — resilient to schema differences
+// recruiter_profile.php — STRICT to jobgate.sql schema
 require_once 'db_connect.php';
 session_start();
 
-/* DEV: show errors (turn off in production) */
+/* DEV ERROR REPORTING (turn off in production) */
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 
-/* Helpers */
+/* Helper */
 if (!function_exists('sanitize_input')) {
   function sanitize_input($v){ return trim(filter_var($v, FILTER_SANITIZE_FULL_SPECIAL_CHARS)); }
 }
@@ -33,50 +33,29 @@ $full_name = $_SESSION['full_name'] ?? 'Recruiter';
 $message = '';
 $message_type = '';
 
-/* Column exists via INFORMATION_SCHEMA (prepared-safe) */
-function column_exists($conn, $table, $column) {
-  $sql = "SELECT COUNT(*) AS c
-          FROM INFORMATION_SCHEMA.COLUMNS
-          WHERE TABLE_SCHEMA = DATABASE()
-            AND TABLE_NAME = ?
-            AND COLUMN_NAME = ?";
-  $stmt = $conn->prepare($sql);
-  $stmt->bind_param("ss", $table, $column);
-  $stmt->execute();
-  $res = $stmt->get_result()->fetch_assoc();
-  $stmt->close();
-  return isset($res['c']) && (int)$res['c'] > 0;
-}
-
-/* pick first existing column from a list */
-function first_existing_column($conn, $table, $candidates) {
-  foreach ($candidates as $col) {
-    if (column_exists($conn, $table, $col)) return $col;
-  }
-  return null;
-}
-
 /* Map Users.user_id -> Recruiters.recruiter_id */
 $recruiter_id = null;
 try {
-  $stmt = $conn->prepare("SELECT recruiter_id FROM Recruiters WHERE user_id = ?");
+  $stmt = $conn->prepare("SELECT recruiter_id, company_logo_url FROM Recruiters WHERE user_id = ?");
   $stmt->bind_param("s", $user_id);
   $stmt->execute();
-  $row = $stmt->get_result()->fetch_assoc();
-  if ($row) $recruiter_id = $row['recruiter_id'];
+  $recRow = $stmt->get_result()->fetch_assoc();
+  if ($recRow) {
+    $recruiter_id = $recRow['recruiter_id'];
+    $existing_logo = $recRow['company_logo_url'];
+  }
   $stmt->close();
 } catch (Throwable $e) {
   $message = "DB error mapping recruiter: ".$e->getMessage();
   $message_type = 'error';
 }
 
-/* POST: create job */
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action']==='post_job') {
+/* POST: Create job (STRICT to schema) */
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ( $_POST['action'] ?? '' ) === 'post_job') {
   try {
     if (!$recruiter_id) throw new Exception("No recruiter profile found for this user.");
 
-    // Optional logo upload
-    $logo_path = null;
+    // Optional: update recruiter company logo (since Jobs table has no logo column)
     if (!empty($_FILES['logo']['name']) && $_FILES['logo']['error'] === UPLOAD_ERR_OK) {
       $dir_fs  = __DIR__ . '/uploads/job_logos/';
       $dir_web = 'uploads/job_logos/';
@@ -89,70 +68,61 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
       if (!in_array($ext, ['jpg','jpeg','png','gif','webp'], true)) throw new Exception("Only JPG, JPEG, PNG, GIF, WEBP allowed.");
       if ($_FILES['logo']['size'] > 2*1024*1024) throw new Exception("File too large. Max 2MB.");
 
-      $fname = guid().'.'.$ext;
+      $fname = GUID().'.'.$ext;
       if (!move_uploaded_file($_FILES['logo']['tmp_name'], $dir_fs.$fname)) {
         throw new Exception("Failed to move uploaded file. Check folder permissions.");
       }
-      $logo_path = $dir_web.$fname; // save in DB
+      $logo_url = $dir_web.$fname;
+
+      // Save to Recruiters.company_logo_url
+      $stUp = $conn->prepare("UPDATE Recruiters SET company_logo_url = ? WHERE recruiter_id = ?");
+      $stUp->bind_param("ss", $logo_url, $recruiter_id);
+      $stUp->execute(); $stUp->close();
     }
 
-    // Inputs (schema uses: title, description, logo_path, *maybe* deadline)
-    $job_id      = guid();
-    $title       = sanitize_input($_POST['title'] ?? '');
-    $job_role    = sanitize_input($_POST['job_role'] ?? '');
-    $sector_id   = sanitize_input($_POST['sector_id'] ?? '');
-    $type        = sanitize_input($_POST['type'] ?? 'Full-time');
-    $salary      = (int)($_POST['salary'] ?? 0);
-    $description = sanitize_input($_POST['description'] ?? '');
-    $requirements= sanitize_input($_POST['requirements'] ?? '');
-    $featured    = isset($_POST['featured']) ? 1 : 0;
-    $assessment_id = sanitize_input($_POST['assessment_id'] ?? '');
+    // Inputs for Jobs (as per jobgate.sql)
+    $job_id     = GUID();
+    $title      = sanitize_input($_POST['title'] ?? '');
+    $job_role   = sanitize_input($_POST['job_role'] ?? '');
+    $sector_id  = sanitize_input($_POST['sector_id'] ?? '');
+    $location   = sanitize_input($_POST['location'] ?? '');
+    $type       = sanitize_input($_POST['type'] ?? 'Full-time'); // ENUM('Full-time','Part-time','Contract','Internship')
+    $salary_min = (int)($_POST['salary_min'] ?? 0);
+    $salary_max = (int)($_POST['salary_max'] ?? 0);
+    $description= sanitize_input($_POST['description'] ?? '');
+    $requirements = sanitize_input($_POST['requirements'] ?? '');
+    $application_deadline = sanitize_input($_POST['application_deadline'] ?? ($_POST['deadline'] ?? ''));
 
-    if ($title==='' || $job_role==='' || $sector_id==='' || $description==='') {
-      throw new Exception("Please fill required fields (Title, Role, Sector, Description).");
+    if ($title==='' || $sector_id==='' || $description==='' || $application_deadline==='') {
+      throw new Exception("Please fill required fields (Title, Sector, Description, Application Deadline).");
     }
-
-    // Optional columns
-    $deadline_col  = column_exists($conn, 'Jobs', 'deadline') ? 'deadline' : null;
-    $created_col   = first_existing_column($conn, 'Jobs', ['creation_date','posted_date','created_at']);
+    if (!in_array($type, ['Full-time','Part-time','Contract','Internship'], true)) {
+      throw new Exception("Invalid employment type.");
+    }
+    if ($salary_max && $salary_min && $salary_max < $salary_min) {
+      throw new Exception("Salary max cannot be less than salary min.");
+    }
 
     $conn->begin_transaction();
 
-    // Build INSERT dynamically to match your schema
-    $fields = ['job_id','recruiter_id','sector_id','title','job_role','logo_path','job_type','salary','description','requirements','is_featured'];
-    $placeholders = array_fill(0, count($fields), '?');
-    $params = [$job_id, $recruiter_id, $sector_id, $title, $job_role, $logo_path, $type, $salary, $description, $requirements, $featured];
-    $types  = 'sssssssissi'; // s,s,s,s,s,s,s,i,s,s,i
-
-    // deadline (optional)
-    if ($deadline_col) {
-      $deadline = sanitize_input($_POST['deadline'] ?? '');
-      if ($deadline === '') throw new Exception("Please provide Application Deadline.");
-      $fields[] = $deadline_col;
-      $placeholders[] = '?';
-      $params[] = $deadline;
-      $types   .= 's';
-    }
-
-    // created/posted date column (optional)
-    if ($created_col) {
-      $fields[] = $created_col;
-      $placeholders[] = 'NOW()'; // direct NOW(), no bind
-    }
-
-    $sql = "INSERT INTO Jobs (".implode(',', $fields).") VALUES (".implode(',', $placeholders).")";
+    // INSERT into Jobs (exact columns)
+    $sql = "INSERT INTO Jobs
+            (job_id, recruiter_id, sector_id, title, job_role, location, type, salary_min, salary_max, description, requirements, application_deadline)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?)";
     $stmt = $conn->prepare($sql);
-    $stmt->bind_param($types, ...$params);
+    $stmt->bind_param(
+      "ssssssssisss",
+      $job_id, $recruiter_id, $sector_id, $title, $job_role, $location, $type, $salary_min, $salary_max, $description, $requirements, $application_deadline
+    );
     $stmt->execute();
     $stmt->close();
 
-    // Optional assessment mapping
+    // Optional assessment mapping (JobAssessmentRequirements has ONLY (job_id, assessment_id))
+    $assessment_id = sanitize_input($_POST['assessment_id'] ?? '');
     if ($assessment_id !== '') {
-      $req_id = guid();
-      $st2 = $conn->prepare("INSERT INTO JobAssessmentRequirements (req_id, job_id, assessment_id) VALUES (?,?,?)");
-      $st2->bind_param("sss", $req_id, $job_id, $assessment_id);
-      $st2->execute();
-      $st2->close();
+      $st2 = $conn->prepare("INSERT INTO JobAssessmentRequirements (job_id, assessment_id) VALUES (?, ?)");
+      $st2->bind_param("ss", $job_id, $assessment_id);
+      $st2->execute(); $st2->close();
     }
 
     $conn->commit();
@@ -182,22 +152,14 @@ try {
   $q->close();
 } catch (Throwable $e) {}
 
-/* History (deadline + created date column optional) */
+/* History — use posted_at & application_deadline exactly as in schema */
 $job_history = [];
 try {
   if ($recruiter_id) {
-    $deadline_col = column_exists($conn, 'Jobs', 'deadline') ? 'deadline' : null;
-    $created_col  = first_existing_column($conn, 'Jobs', ['creation_date','posted_date','created_at']);
-
-    // select list
-    $selectCols = "job_id, title, job_role, is_featured";
-    if ($created_col) $selectCols .= ", $created_col AS created_dt";
-    if ($deadline_col) $selectCols .= ", $deadline_col AS deadline";
-
-    // order by: prefer created col; fallback job_id
-    $orderBy = $created_col ? $created_col." DESC" : "job_id DESC";
-
-    $sqlH = "SELECT $selectCols FROM Jobs WHERE recruiter_id = ? ORDER BY $orderBy";
+    $sqlH = "SELECT job_id, title, job_role, location, type, salary_min, salary_max, application_deadline, posted_at
+             FROM Jobs
+             WHERE recruiter_id = ?
+             ORDER BY posted_at DESC";
     $st = $conn->prepare($sqlH);
     $st->bind_param("s", $recruiter_id);
     $st->execute();
@@ -222,9 +184,33 @@ try {
     .alert{padding:12px;border-radius:8px;margin:12px 0}
     .alert-success{background:#dcfce7;color:#166534}
     .alert-error{background:#fee2e2;color:#991b1b}
+    .topbar{display:flex;align-items:center;justify-content:center;padding:10px 16px;background:#fff;border-bottom:1px solid #e5e7eb}
+    .topbar-inner{max-width:1100px;width:100%;display:flex;align-items:center;justify-content:space-between}
+    .logo{height:40px}
+    .top-actions .tlink{margin-right:14px;color:#334155;font-weight:600;text-decoration:none}
+    .avatar{width:36px;height:36px;border-radius:9999px}
+    .layout{display:flex;max-width:1100px;margin:24px auto;gap:18px}
+    .sidebar{width:230px;background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:12px;height:max-content}
+    .sbtn{display:flex;align-items:center;gap:8px;padding:10px;border-radius:10px;color:#0f172a;text-decoration:none;border:0;background:#f8fafc;margin-bottom:8px}
+    .sbtn.active{background:#e2e8f0}
+    .sbtn.logout{background:#fee2e2;color:#991b1b}
+    .content{flex:1}
+    .profile-head{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:18px;margin-bottom:16px}
+    .job-post-card,.history-card{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:18px;margin-bottom:16px}
+    .form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+    .form-group{display:flex;flex-direction:column;gap:6px}
+    .form-full{grid-column:1/-1}
+    .form-group input,.form-group select,.form-group textarea{padding:10px;border:1px solid #cbd5e1;border-radius:8px}
+    .btn-primary{display:inline-flex;align-items:center;gap:6px;background:#2563eb;color:#fff;border:0;padding:10px 14px;border-radius:10px;cursor:pointer}
+    .btn-ghost{display:inline-flex;align-items:center;gap:6px;border:1px solid #cbd5e1;padding:8px 10px;border-radius:10px;text-decoration:none;color:#0f172a}
+    .job-history-list{display:flex;flex-direction:column;gap:12px}
+    .history-item{display:flex;align-items:center;justify-content:space-between;border:1px solid #e5e7eb;border-radius:10px;padding:12px}
+    .job-title{font-weight:700}
+    .text-muted{color:#64748b}
   </style>
 </head>
 <body>
+  <!-- Top bar -->
   <header class="topbar">
     <div class="topbar-inner">
       <img src="./JobGate_logo.png" alt="JobGate" class="logo" />
@@ -238,22 +224,26 @@ try {
   </header>
 
   <div class="layout">
+    <!-- Sidebar -->
     <aside class="sidebar">
-      <a class="sbtn" href="home.php"><iconify-icon icon="mdi:view-dashboard"></iconify-icon>Dashboard</a>
-      <a class="sbtn active" href="recruiter_profile.php"><iconify-icon icon="mdi:briefcase-edit-outline"></iconify-icon>Post Job</a>
-      <a class="sbtn" href="jobs.php"><iconify-icon icon="mdi:account-group-outline"></iconify-icon>View Applicants</a>
+      <a class="sbtn" href="home.php">
+        <iconify-icon icon="mdi:view-dashboard"></iconify-icon>Dashboard
+      </a>
+      <a class="sbtn active" href="recruiter_profile.php">
+        <iconify-icon icon="mdi:briefcase-edit-outline"></iconify-icon>Post Job
+      </a>
+      <a class="sbtn" href="jobs.php">
+        <iconify-icon icon="mdi:account-group-outline"></iconify-icon>View Applicants
+      </a>
       <div class="spacer"></div>
-      <a class="sbtn logout" href="logout.php"><iconify-icon icon="mdi:logout"></iconify-icon>Log out</a>
+      <a class="sbtn logout" href="logout.php">
+        <iconify-icon icon="mdi:logout"></iconify-icon>Log out
+      </a>
     </aside>
 
+    <!-- Main Content -->
     <main class="content">
-      <section class="profile-head">
-        <div class="ph-left">
-          <h1>Welcome, <?php echo htmlspecialchars($full_name); ?></h1>
-          <p>Manage your job postings and brand assets.</p>
-        </div>
-      </section>
-
+      <!-- Status -->
       <?php if (!empty($message)): ?>
         <div class="alert <?php echo ($message_type==='success')?'alert-success':'alert-error'; ?>">
           <?php echo htmlspecialchars($message); ?>
@@ -264,28 +254,33 @@ try {
         <div class="alert alert-error">Recruiter profile mapping missing. Ensure a row exists in <code>Recruiters</code> for your <code>user_id</code>.</div>
       <?php endif; ?>
 
+      <!-- Job Posting Form (STRICT to schema) -->
       <section class="job-post-card">
         <h3 class="card-title">Post a New Job Opening</h3>
         <form method="POST" action="recruiter_profile.php" enctype="multipart/form-data">
           <input type="hidden" name="action" value="post_job" />
 
           <div class="form-grid">
+            <!-- Title -->
             <div class="form-group">
               <label for="title">Job Title *</label>
               <input type="text" id="title" name="title" required value="<?php echo isset($_POST['title'])?htmlspecialchars($_POST['title']):''; ?>">
             </div>
 
+            <!-- Role -->
             <div class="form-group">
-              <label for="job_role">Specific Role/Title *</label>
-              <input type="text" id="job_role" name="job_role" required value="<?php echo isset($_POST['job_role'])?htmlspecialchars($_POST['job_role']):''; ?>">
+              <label for="job_role">Specific Role/Title</label>
+              <input type="text" id="job_role" name="job_role" value="<?php echo isset($_POST['job_role'])?htmlspecialchars($_POST['job_role']):''; ?>">
             </div>
 
+            <!-- Company Logo (saves to Recruiters.company_logo_url) -->
             <div class="form-group">
-              <label for="logo">Company Logo / Job Image (Max 2MB)</label>
+              <label for="logo">Company Logo (Max 2MB)</label>
               <input type="file" id="logo" name="logo" accept="image/*">
-              <small class="text-muted">Used as featured image.</small>
+              <small class="text-muted">Saved as your company logo (Jobs table has no logo column).</small>
             </div>
 
+            <!-- Sector -->
             <div class="form-group">
               <label for="sector_id">Job Sector *</label>
               <select id="sector_id" name="sector_id" required>
@@ -299,12 +294,19 @@ try {
               </select>
             </div>
 
+            <!-- Location -->
+            <div class="form-group">
+              <label for="location">Location</label>
+              <input type="text" id="location" name="location" value="<?php echo isset($_POST['location'])?htmlspecialchars($_POST['location']):''; ?>">
+            </div>
+
+            <!-- Employment Type (ENUM) -->
             <div class="form-group">
               <label for="type">Employment Type *</label>
               <select id="type" name="type" required>
                 <?php
                   $t = isset($_POST['type'])?$_POST['type']:'Full-time';
-                  foreach (['Full-time','Part-time','Contract'] as $opt) {
+                  foreach (['Full-time','Part-time','Contract','Internship'] as $opt) {
                     $sel = ($t===$opt)?'selected':'';
                     echo '<option value="'.htmlspecialchars($opt).'" '.$sel.'>'.htmlspecialchars($opt).'</option>';
                   }
@@ -312,18 +314,26 @@ try {
               </select>
             </div>
 
+            <!-- Salary Min -->
             <div class="form-group">
-              <label for="salary">Salary (USD/Month)</label>
-              <input type="number" id="salary" name="salary" min="0" step="100" value="<?php echo isset($_POST['salary'])?htmlspecialchars($_POST['salary']):'0'; ?>">
+              <label for="salary_min">Salary Min</label>
+              <input type="number" id="salary_min" name="salary_min" min="0" step="100" value="<?php echo isset($_POST['salary_min'])?htmlspecialchars($_POST['salary_min']):'0'; ?>">
             </div>
 
-            <?php if (column_exists($conn, 'Jobs', 'deadline')): ?>
+            <!-- Salary Max -->
             <div class="form-group">
-              <label for="deadline">Application Deadline *</label>
-              <input type="date" id="deadline" name="deadline" required value="<?php echo isset($_POST['deadline'])?htmlspecialchars($_POST['deadline']):''; ?>">
+              <label for="salary_max">Salary Max</label>
+              <input type="number" id="salary_max" name="salary_max" min="0" step="100" value="<?php echo isset($_POST['salary_max'])?htmlspecialchars($_POST['salary_max']):'0'; ?>">
             </div>
-            <?php endif; ?>
 
+            <!-- Application Deadline (NOT NULL) -->
+            <div class="form-group">
+              <label for="application_deadline">Application Deadline *</label>
+              <input type="date" id="application_deadline" name="application_deadline" required
+                     value="<?php echo isset($_POST['application_deadline'])?htmlspecialchars($_POST['application_deadline']):(isset($_POST['deadline'])?htmlspecialchars($_POST['deadline']):''); ?>">
+            </div>
+
+            <!-- Assessment -->
             <div class="form-group form-full">
               <label for="assessment_id">Mandatory Skill Assessment (Optional)</label>
               <select id="assessment_id" name="assessment_id">
@@ -338,27 +348,26 @@ try {
               <small class="text-muted">If selected, candidates must pass (≥ 80) before applying.</small>
             </div>
 
+            <!-- Description -->
             <div class="form-group form-full">
               <label for="description">Job Description *</label>
-              <textarea id="description" name="description" required rows="5"><?php echo isset($_POST['description'])?htmlspecialchars($_POST['description']):''; ?></textarea>
+              <textarea id="description" name="description" rows="5" required><?php echo isset($_POST['description'])?htmlspecialchars($_POST['description']):''; ?></textarea>
             </div>
 
+            <!-- Requirements -->
             <div class="form-group form-full">
               <label for="requirements">Key Requirements / Skills</label>
               <textarea id="requirements" name="requirements" rows="3"><?php echo isset($_POST['requirements'])?htmlspecialchars($_POST['requirements']):''; ?></textarea>
             </div>
           </div>
 
-          <div class="form-actions">
-            <label style="margin-right: 16px;">
-              <input type="checkbox" name="featured" <?php echo (!empty($_POST['featured']))?'checked':''; ?>>
-              Feature on Homepage
-            </label>
+          <div class="form-actions" style="margin-top:10px">
             <button type="submit" class="btn-primary"><iconify-icon icon="mdi:send"></iconify-icon> Publish Job</button>
           </div>
         </form>
       </section>
 
+      <!-- Job History -->
       <section class="history-card">
         <h3 class="card-title">Your Posted Jobs (<?php echo count($job_history); ?>)</h3>
         <?php if (empty($job_history)): ?>
@@ -370,14 +379,22 @@ try {
                 <div>
                   <div class="job-title"><?php echo htmlspecialchars($job['title']); ?></div>
                   <div class="job-meta">
-                    Role: <?php echo htmlspecialchars($job['job_role']); ?>
-                    <?php if (isset($job['created_dt']) && !empty($job['created_dt'])): ?>
-                      | Posted: <?php echo date('M d, Y', strtotime($job['created_dt'])); ?>
+                    <?php if (!empty($job['job_role'])): ?>
+                      Role: <?php echo htmlspecialchars($job['job_role']); ?> |
                     <?php endif; ?>
-                    <?php if (isset($job['deadline']) && !empty($job['deadline'])): ?>
-                      | Deadline: <?php echo date('M d, Y', strtotime($job['deadline'])); ?>
+                    <?php if (!empty($job['location'])): ?>
+                      Location: <?php echo htmlspecialchars($job['location']); ?> |
                     <?php endif; ?>
-                    <?php if (!empty($job['is_featured'])): ?> | <strong>Featured</strong><?php endif; ?>
+                    Type: <?php echo htmlspecialchars($job['type']); ?>
+                    <?php if (!empty($job['salary_min']) || !empty($job['salary_max'])): ?>
+                      | Salary: <?php echo htmlspecialchars($job['salary_min']); ?> - <?php echo htmlspecialchars($job['salary_max']); ?>
+                    <?php endif; ?>
+                    <?php if (!empty($job['posted_at'])): ?>
+                      | Posted: <?php echo date('M d, Y', strtotime($job['posted_at'])); ?>
+                    <?php endif; ?>
+                    <?php if (!empty($job['application_deadline'])): ?>
+                      | Deadline: <?php echo date('M d, Y', strtotime($job['application_deadline'])); ?>
+                    <?php endif; ?>
                   </div>
                 </div>
                 <a href="job_details.php?jobId=<?php echo htmlspecialchars($job['job_id']); ?>" class="btn-ghost">View</a>
