@@ -1,3 +1,12 @@
+<?php
+require_once 'db_connect.php';
+
+// যদি ইউজার লগইন করা থাকে, তবে তাকে সরাসরি home.php তে পাঠিয়ে দেওয়া হবে
+if (is_logged_in()) {
+    redirect('home.php');
+}
+// যদি লগইন করা না থাকে, তবে ল্যান্ডিং পেজটি দেখানো হবে।
+?>
 <!DOCTYPE html>
 <html lang="bn">
   <head>
@@ -24,10 +33,10 @@
         <p class="hint">
           <strong>Please log or register to get started.</strong>
         </p>
-
-        <a href="signup.html" class="btn-primary">Register now</a>
+        
+        <!-- href আপডেট করা হলো signup.php এর দিকে -->
+        <a href="signup.php" class="btn-primary">Register now</a>
       </section>
-      <!-- auth/register.php -->
 
       <!-- Right column -->
       <aside class="card">
