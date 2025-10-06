@@ -5,9 +5,19 @@ $error = '';
 $email = '';
 $user_type = ''; // Will be used to store the user type upon successful login
 
-// Check if user is already logged in, redirect to home.php if true
+// Check if user is already logged in, redirect to their main page if true
 if (is_logged_in()) {
-    redirect('home.php');
+    // Redirect logged-in users to their respective main pages
+    if ($_SESSION['user_type'] === 'admin') {
+        redirect('admin_dashboard.php');
+    } elseif ($_SESSION['user_type'] === 'recruiter') {
+        redirect('recruiter_profile.php');
+    } elseif ($_SESSION['user_type'] === 'applicant') {
+        redirect('profile.php');
+    } else {
+        // Fallback for any unknown user type
+        redirect('home.php');
+    }
 }
 
 // Check if form was submitted
@@ -25,7 +35,15 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $input_password_hash = hash('sha256', $password);
 
         // 3. Prepare and execute the query to find the user
+        // Note: Assumed $conn is the correct database connection object
         $stmt = $conn->prepare("SELECT user_id, password_hash, user_type, full_name FROM Users WHERE email = ?");
+        
+        // --- ADDED DEBUGGING CHECK ---
+        if ($stmt === false) {
+            $error = "Database preparation failed. Check your db_connect.php or table name.";
+        }
+        // -----------------------------
+        
         $stmt->bind_param("s", $email);
         $stmt->execute();
         $result = $stmt->get_result();
@@ -38,25 +56,29 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 // Password matches, login successful
                 
                 // 5. Start session and set session variables
-                session_start();
+                // session_start() is assumed to be called in db_connect.php
                 $_SESSION['user_id'] = $user['user_id'];
                 $_SESSION['user_type'] = $user['user_type'];
                 $_SESSION['full_name'] = $user['full_name'];
                 
-                // 6. Redirect to the appropriate home page based on user type
+                // 6. Redirect to the appropriate profile/dashboard page based on user type
                 if ($user['user_type'] === 'admin') {
-                    // Note: Admin page is not created yet, so we redirect to a placeholder
                     redirect('admin_dashboard.php'); 
+                } elseif ($user['user_type'] === 'recruiter') {
+                    redirect('recruiter_profile.php'); 
+                } elseif ($user['user_type'] === 'applicant') {
+                    redirect('profile.php'); 
                 } else {
-                    redirect('home.php');
+                    // Fallback for any unknown user type
+                    redirect('home.php'); 
                 }
             } else {
                 // Password incorrect
-                $error = "Invalid email or password.";
+                $error = "Invalid email or password. (Password Mismatch)"; // Added Mismatch info for debugging
             }
         } else {
             // Email not found
-            $error = "Invalid email or password.";
+            $error = "Invalid email or password. (Email Not Found)"; // Added Not Found info for debugging
         }
 
         $stmt->close();
@@ -179,6 +201,3 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     </script>
   </body>
 </html>
-
-<!-- admin1@jobgate.com - adminpass1
-admin2@jobgate.com - adminpass2 -->

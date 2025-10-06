@@ -21,78 +21,125 @@ $message_type = '';
 
 // --- 2. Handle Job Posting Logic (INSERT into Jobs, JobAssessmentRequirements) ---
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'post_job') {
-    // Collect and sanitize inputs
-    $job_id = GUID();
-    $title = sanitize_input($_POST['title']);
-    $job_role = sanitize_input($_POST['job_role']);
-    $sector_id = sanitize_input($_POST['sector_id']);
-    $type = sanitize_input($_POST['type']);
-    $salary = (int) $_POST['salary'];
-    $deadline = sanitize_input($_POST['deadline']);
-    $description = sanitize_input($_POST['description']);
-    $requirements = sanitize_input($_POST['requirements']);
-    $featured = isset($_POST['featured']) ? 1 : 0;
-    $assessment_id = sanitize_input($_POST['assessment_id']);
     
-    // Simple validation (can be expanded)
-    if (empty($title) || empty($job_role) || empty($sector_id) || empty($deadline) || empty($description)) {
-        $message = "Please fill in all required fields.";
-        $message_type = 'error';
-    } else {
-        $mysqli->begin_transaction();
-        try {
-            // A. Insert into Jobs table
-            $stmt = $mysqli->prepare("INSERT INTO Jobs (job_id, recruiter_id, sector_id, title, job_role, job_type, salary, description, requirements, deadline, is_featured) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-            $stmt->bind_param("ssssssisssi", $job_id, $recruiter_id, $sector_id, $title, $job_role, $type, $salary, $description, $requirements, $deadline, $featured);
-            $stmt->execute();
-            
-            // B. Insert into JobAssessmentRequirements (Link job to assessment)
-            if (!empty($assessment_id)) {
-                $req_id = GUID();
-                $stmt_req = $mysqli->prepare("INSERT INTO JobAssessmentRequirements (req_id, job_id, assessment_id) VALUES (?, ?, ?)");
-                $stmt_req->bind_param("sss", $req_id, $job_id, $assessment_id);
-                $stmt_req->execute();
-            }
-
-            $mysqli->commit();
-            $message = "Job posted successfully!";
-            $message_type = 'success';
-            
-            // Clear form data after successful submission (Optional)
-            unset($_POST);
-
-        } catch (mysqli_sql_exception $e) {
-            $mysqli->rollback();
-            $message = "Error posting job: " . $e->getMessage();
+    // File upload variables initialization
+    $logo_path = NULL;
+    $upload_success = true;
+    
+    // 2.1 File Upload Handling
+    if (isset($_FILES['logo']) && $_FILES['logo']['error'] === UPLOAD_ERR_OK) {
+        $upload_dir = 'uploads/job_logos/';
+        
+        // Ensure the upload directory exists
+        if (!is_dir($upload_dir)) {
+            mkdir($upload_dir, 0777, true);
+        }
+        
+        $file_extension = pathinfo($_FILES['logo']['name'], PATHINFO_EXTENSION);
+        $file_name = GUID() . '.' . $file_extension;
+        $target_file = $upload_dir . $file_name;
+        
+        // Move the uploaded file
+        if (move_uploaded_file($_FILES['logo']['tmp_name'], $target_file)) {
+            $logo_path = $target_file; // Path to save in DB
+        } else {
+            $message = "Error uploading file. Check folder permissions (0777) or file size.";
             $message_type = 'error';
+            $upload_success = false;
+        }
+    }
+
+    // 2.2 Proceed with Job Data Insertion only if file upload was successful or no file was uploaded
+    if ($upload_success) {
+        // Collect and sanitize inputs
+        $job_id = GUID();
+        $title = sanitize_input($_POST['title']);
+        $job_role = sanitize_input($_POST['job_role']);
+        $sector_id = sanitize_input($_POST['sector_id']);
+        $type = sanitize_input($_POST['type']);
+        $salary = (int) $_POST['salary'];
+        $deadline = sanitize_input($_POST['deadline']);
+        $description = sanitize_input($_POST['description']);
+        $requirements = sanitize_input($_POST['requirements']);
+        $featured = isset($_POST['featured']) ? 1 : 0;
+        $assessment_id = sanitize_input($_POST['assessment_id']);
+        
+        // Simple validation (can be expanded)
+        if (empty($title) || empty($job_role) || empty($sector_id) || empty($deadline) || empty($description)) {
+            $message = "Please fill in all required fields.";
+            $message_type = 'error';
+        } else {
+            // Use $conn for transaction and queries
+            $conn->begin_transaction();
+            try {
+                // A. Insert into Jobs table (Added logo_path column)
+                $stmt = $conn->prepare("INSERT INTO Jobs (job_id, recruiter_id, sector_id, title, job_role, logo_path, job_type, salary, description, requirements, deadline, is_featured) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                // 12 parameters: 6s (id, rec, sec, title, role, logo), 1s (type), 1i (salary), 3s (desc, req, dead), 1i (featured)
+                $stmt->bind_param("sssssssisssi", 
+                    $job_id, $recruiter_id, $sector_id, $title, $job_role, $logo_path, $type, $salary, $description, $requirements, $deadline, $featured);
+                $stmt->execute();
+                
+                // B. Insert into JobAssessmentRequirements (Link job to assessment - using $conn)
+                if (!empty($assessment_id)) {
+                    $req_id = GUID();
+                    $stmt_req = $conn->prepare("INSERT INTO JobAssessmentRequirements (req_id, job_id, assessment_id) VALUES (?, ?, ?)");
+                    $stmt_req->bind_param("sss", $req_id, $job_id, $assessment_id);
+                    $stmt_req->execute();
+                }
+
+                $conn->commit();
+                $message = "Job posted successfully!";
+                $message_type = 'success';
+                
+                // Clear form data after successful submission
+                unset($_POST);
+
+            } catch (mysqli_sql_exception $e) {
+                $conn->rollback();
+                $message = "Error posting job: " . $e->getMessage();
+                $message_type = 'error';
+            }
         }
     }
 }
 
-// --- 3. Data Fetching for Dropdowns and Job History ---
+// --- 3. Data Fetching for Dropdowns and Job History (using $conn) ---
 
 // Fetch Job Sectors for dropdown
 $sectors = [];
-$result = $mysqli->query("SELECT sector_id, name FROM JobSectors ORDER BY name");
-while ($row = $result->fetch_assoc()) {
-    $sectors[] = $row;
+// Check if the database connection object ($conn) is valid before querying
+if ($conn && !$conn->connect_error) {
+    $result = $conn->query("SELECT sector_id, name FROM JobSectors ORDER BY name");
+    if ($result) {
+        while ($row = $result->fetch_assoc()) {
+            $sectors[] = $row;
+        }
+    }
 }
 
 // Fetch Assessments for dropdown
 $assessments = [];
-$result = $mysqli->query("SELECT assessment_id, title FROM Assessments ORDER BY title");
-while ($row = $result->fetch_assoc()) {
-    $assessments[] = $row;
+if ($conn && !$conn->connect_error) {
+    $result = $conn->query("SELECT assessment_id, title FROM Assessments ORDER BY title");
+    if ($result) {
+        while ($row = $result->fetch_assoc()) {
+            $assessments[] = $row;
+        }
+    }
 }
 
 // Fetch Recruiter's Job History
 $job_history = [];
-$stmt = $mysqli->prepare("SELECT job_id, title, job_role, deadline, creation_date FROM Jobs WHERE recruiter_id = ? ORDER BY creation_date DESC");
-$stmt->bind_param("s", $recruiter_id);
-$stmt->execute();
-$result = $stmt->get_result();
-while ($row = $result->fetch_assoc()) {
-    $job_history[] = $row;
+if ($conn && !$conn->connect_error) {
+    $stmt = $conn->prepare("SELECT job_id, title, job_role, deadline, creation_date, is_featured FROM Jobs WHERE recruiter_id = ? ORDER BY creation_date DESC");
+    if ($stmt) {
+        $stmt->bind_param("s", $recruiter_id);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        while ($row = $result->fetch_assoc()) {
+            $job_history[] = $row;
+        }
+    }
 }
 ?>
 <!DOCTYPE html>
@@ -166,7 +213,7 @@ while ($row = $result->fetch_assoc()) {
         <!-- Job Posting Form -->
         <section class="job-post-card">
           <h3 class="card-title">Post a New Job Opening</h3>
-          <form method="POST" action="recruiter_profile.php">
+          <form method="POST" action="recruiter_profile.php" enctype="multipart/form-data">
             <input type="hidden" name="action" value="post_job" />
             <div class="form-grid">
               <!-- Job Title -->
@@ -179,6 +226,13 @@ while ($row = $result->fetch_assoc()) {
               <div class="form-group">
                 <label for="job_role">Specific Role/Title *</label>
                 <input type="text" id="job_role" name="job_role" required value="<?= $_POST['job_role'] ?? '' ?>"/>
+              </div>
+
+              <!-- Job Logo Upload -->
+              <div class="form-group">
+                <label for="logo">Company Logo / Job Image (Max 2MB)</label>
+                <input type="file" id="logo" name="logo" accept="image/*"/>
+                <small class="text-muted">Will be used as featured image.</small>
               </div>
               
               <!-- Job Sector -->
