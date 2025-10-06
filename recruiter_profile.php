@@ -1,15 +1,15 @@
 <?php
-// recruiter_profile.php — STRICT to jobgate.sql schema
+// recruiter_profile.php — STRICT to jobgate.sql + fixed navbar overlap
 require_once 'db_connect.php';
 session_start();
 
-/* DEV ERROR REPORTING (turn off in production) */
+/* DEV (turn off in prod) */
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 
-/* Helper */
+/* Helpers */
 if (!function_exists('sanitize_input')) {
   function sanitize_input($v){ return trim(filter_var($v, FILTER_SANITIZE_FULL_SPECIAL_CHARS)); }
 }
@@ -35,6 +35,7 @@ $message_type = '';
 
 /* Map Users.user_id -> Recruiters.recruiter_id */
 $recruiter_id = null;
+$existing_logo = null;
 try {
   $stmt = $conn->prepare("SELECT recruiter_id, company_logo_url FROM Recruiters WHERE user_id = ?");
   $stmt->bind_param("s", $user_id);
@@ -50,12 +51,12 @@ try {
   $message_type = 'error';
 }
 
-/* POST: Create job (STRICT to schema) */
+/* POST: Create job (STRICT to jobgate.sql) */
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ( $_POST['action'] ?? '' ) === 'post_job') {
   try {
     if (!$recruiter_id) throw new Exception("No recruiter profile found for this user.");
 
-    // Optional: update recruiter company logo (since Jobs table has no logo column)
+    // Optional: update recruiter company logo (Jobs table has no logo column)
     if (!empty($_FILES['logo']['name']) && $_FILES['logo']['error'] === UPLOAD_ERR_OK) {
       $dir_fs  = __DIR__ . '/uploads/job_logos/';
       $dir_web = 'uploads/job_logos/';
@@ -78,6 +79,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ( $_POST['action'] ?? '' ) === 'pos
       $stUp = $conn->prepare("UPDATE Recruiters SET company_logo_url = ? WHERE recruiter_id = ?");
       $stUp->bind_param("ss", $logo_url, $recruiter_id);
       $stUp->execute(); $stUp->close();
+      $existing_logo = $logo_url;
     }
 
     // Inputs for Jobs (as per jobgate.sql)
@@ -152,7 +154,7 @@ try {
   $q->close();
 } catch (Throwable $e) {}
 
-/* History — use posted_at & application_deadline exactly as in schema */
+/* History — posted_at & application_deadline */
 $job_history = [];
 try {
   if ($recruiter_id) {
@@ -181,20 +183,40 @@ try {
   <link rel="stylesheet" href="recruiter_profile.css" />
   <script src="https://code.iconify.design/iconify-icon/2.1.0/iconify-icon.min.js"></script>
   <style>
-    .alert{padding:12px;border-radius:8px;margin:12px 0}
-    .alert-success{background:#dcfce7;color:#166534}
-    .alert-error{background:#fee2e2;color:#991b1b}
-    .topbar{display:flex;align-items:center;justify-content:center;padding:10px 16px;background:#fff;border-bottom:1px solid #e5e7eb}
-    .topbar-inner{max-width:1100px;width:100%;display:flex;align-items:center;justify-content:space-between}
-    .logo{height:40px}
-    .top-actions .tlink{margin-right:14px;color:#334155;font-weight:600;text-decoration:none}
-    .avatar{width:36px;height:36px;border-radius:9999px}
-    .layout{display:flex;max-width:1100px;margin:24px auto;gap:18px}
-    .sidebar{width:230px;background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:12px;height:max-content}
-    .sbtn{display:flex;align-items:center;gap:8px;padding:10px;border-radius:10px;color:#0f172a;text-decoration:none;border:0;background:#f8fafc;margin-bottom:8px}
-    .sbtn.active{background:#e2e8f0}
-    .sbtn.logout{background:#fee2e2;color:#991b1b}
-    .content{flex:1}
+    /* === FIXED, CONSISTENT NAVBAR === */
+    .topbar{
+      position: sticky; top:0; z-index: 2000;
+      background:#ffffff; border-bottom:1px solid #e5e7eb;
+    }
+    .topbar-inner{
+      max-width: 1120px; margin:0 auto; padding:10px 16px;
+      display:flex; align-items:center; justify-content:space-between; gap:16px;
+      pointer-events: auto;
+    }
+    .brand{ display:flex; align-items:center; text-decoration:none }
+    .logo{ height:40px; display:block }
+    .top-actions{ display:flex; align-items:center; gap:16px }
+    .tlink{
+      display:inline-block; padding:8px 10px; border-radius:8px;
+      color:#0f172a; text-decoration:none; font-weight:600;
+    }
+    .tlink:hover{ background:#f1f5f9 }
+    .user-name{ color:#334155; font-weight:600 }
+    .avatar{ width:36px; height:36px; border-radius:9999px; display:block }
+
+    /* Layout: ensure sidebar never overlaps topbar */
+    .layout{ max-width:1120px; margin:20px auto; padding:0 16px; display:flex; gap:18px; position: relative; z-index: 1; }
+    .sidebar{
+      width:230px; background:#fff; border:1px solid #e5e7eb; border-radius:12px; padding:12px;
+      position: sticky; top:72px; z-index: 1;  /* LOWER than topbar (2000) */
+    }
+    .sbtn{ display:flex; align-items:center; gap:8px; padding:10px; border-radius:10px;
+           color:#0f172a; text-decoration:none; border:0; background:#f8fafc; margin-bottom:8px }
+    .sbtn.active{ background:#e2e8f0 }
+    .sbtn.logout{ background:#fee2e2; color:#991b1b }
+    .content{ flex:1 }
+
+    /* Cards */
     .profile-head{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:18px;margin-bottom:16px}
     .job-post-card,.history-card{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:18px;margin-bottom:16px}
     .form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
@@ -207,17 +229,22 @@ try {
     .history-item{display:flex;align-items:center;justify-content:space-between;border:1px solid #e5e7eb;border-radius:10px;padding:12px}
     .job-title{font-weight:700}
     .text-muted{color:#64748b}
+
+    /* Prevent any accidental overlay clicks */
+    header.topbar, header.topbar * { pointer-events: auto; }
   </style>
 </head>
 <body>
-  <!-- Top bar -->
+  <!-- Top bar (same structure as other pages) -->
   <header class="topbar">
     <div class="topbar-inner">
-      <img src="./JobGate_logo.png" alt="JobGate" class="logo" />
-      <nav class="top-actions">
+      <a href="home.php" class="brand">
+        <img src="./JobGate_logo.png" alt="JobGate" class="logo" />
+      </a>
+      <nav class="top-actions" aria-label="Top navigation">
         <a href="home.php" class="tlink">Home</a>
         <a href="recruiter_profile.php" class="tlink">Profile</a>
-        <span class="tlink"><?php echo htmlspecialchars($full_name); ?></span>
+        <span class="user-name"><?php echo htmlspecialchars($full_name); ?></span>
         <img src="./avatar_placeholder.jpg" class="avatar" alt="User avatar" />
       </nav>
     </div>
@@ -254,7 +281,7 @@ try {
         <div class="alert alert-error">Recruiter profile mapping missing. Ensure a row exists in <code>Recruiters</code> for your <code>user_id</code>.</div>
       <?php endif; ?>
 
-      <!-- Job Posting Form (STRICT to schema) -->
+      <!-- Job Posting Form -->
       <section class="job-post-card">
         <h3 class="card-title">Post a New Job Opening</h3>
         <form method="POST" action="recruiter_profile.php" enctype="multipart/form-data">
@@ -300,7 +327,7 @@ try {
               <input type="text" id="location" name="location" value="<?php echo isset($_POST['location'])?htmlspecialchars($_POST['location']):''; ?>">
             </div>
 
-            <!-- Employment Type (ENUM) -->
+            <!-- Employment Type -->
             <div class="form-group">
               <label for="type">Employment Type *</label>
               <select id="type" name="type" required>
@@ -326,7 +353,7 @@ try {
               <input type="number" id="salary_max" name="salary_max" min="0" step="100" value="<?php echo isset($_POST['salary_max'])?htmlspecialchars($_POST['salary_max']):'0'; ?>">
             </div>
 
-            <!-- Application Deadline (NOT NULL) -->
+            <!-- Application Deadline -->
             <div class="form-group">
               <label for="application_deadline">Application Deadline *</label>
               <input type="date" id="application_deadline" name="application_deadline" required
