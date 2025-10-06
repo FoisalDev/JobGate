@@ -5,17 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>JobGate — Profile</title>
 
-    <!-- Styles -->
     <link rel="stylesheet" href="profile.css" />
 
-    <!-- Icons -->
     <script src="https://code.iconify.design/iconify-icon/2.1.0/iconify-icon.min.js"></script>
 
-    <!-- jsPDF for real PDF downloads -->
     <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
   </head>
   <body>
-    <!-- Top bar -->
     <header class="topbar">
       <div class="topbar-inner">
         <img src="./JobGate_logo.png" alt="JobGate" class="logo" />
@@ -44,7 +40,6 @@
     </header>
 
     <div class="layout">
-      <!-- Sidebar -->
       <aside class="sidebar">
         <button class="sbtn" onclick="window.location.href='home.html'">
           <iconify-icon icon="mdi:home" class="sib"></iconify-icon>Feed
@@ -84,9 +79,7 @@
         </button>
       </aside>
 
-      <!-- Main -->
       <main class="content">
-        <!-- Profile header -->
         <section class="profile-head">
           <div class="ph-left">
             <div class="avatar-lg">
@@ -149,10 +142,8 @@
           </div>
         </section>
 
-        <!-- Editor + Resume -->
         <section class="grid">
-          <!-- Editor -->
-          <form id="form" class="card form" onsubmit="return false">
+          <form id="form" class="card form">
             <h3 class="card-title">Profile Editor</h3>
 
             <div class="row2">
@@ -305,7 +296,6 @@
             </div>
           </form>
 
-          <!-- Resume Preview (print target) -->
           <section id="resumeCard" class="card resume resume-print">
             <div class="resume-head">
               <div class="r-left">
@@ -336,7 +326,6 @@
               <div class="r-block">
                 <h4>Experience</h4>
 
-                <!-- 🔻 Address must appear directly under "Experience" title -->
                 <div class="address-block">
                   <div class="addr-title">Address</div>
                   <div class="addr-text" id="rAddress">—</div>
@@ -442,6 +431,7 @@
         span.innerHTML = `${text} <button type="button" class="pill-x" aria-label="Remove">×</button>`;
         span.querySelector("button").onclick = () => {
           state.skills.splice(i, 1);
+          syncFormDataToState(); // ADDED: Sync before re-render
           save(state);
           renderAll();
         };
@@ -460,10 +450,23 @@
         x.textContent = "×";
         x.onclick = () => {
           onRemove(idx);
+          syncFormDataToState(); // ADDED: Sync before re-render
+          save(state);
+          renderAll();
         };
         div.appendChild(x);
         return div;
       }
+
+      // ** NEW FUNCTION: Syncs form fields to state **
+      const syncFormDataToState = () => {
+        state.name = fName.value.trim() || "Your Name";
+        state.location = fLocation.value.trim();
+        state.work = fWork.value.trim();
+        state.eduLine = fEdu.value.trim();
+        state.quote = fQuote.value.trim();
+        state.about = fAbout.value.trim();
+      };
 
       // ====== Renders ======
       function renderProfile() {
@@ -487,6 +490,8 @@
       }
 
       function renderEditor() {
+        // These lines are why the data was clearing: they overwrite
+        // the current input with the value from state *if you hadn't saved yet*
         fName.value = state.name;
         fLocation.value = state.location;
         fWork.value = state.work;
@@ -503,8 +508,7 @@
           eduList.appendChild(
             listItem(e.title, e.meta, i, (idx) => {
               state.education.splice(idx, 1);
-              save(state);
-              renderAll();
+              // Removal calls syncFormDataToState within listItem's onclick
             })
           );
         });
@@ -515,8 +519,7 @@
           expList.appendChild(
             listItem(e.title, e.meta, i, (idx) => {
               state.experience.splice(idx, 1);
-              save(state);
-              renderAll();
+              // Removal calls syncFormDataToState within listItem's onclick
             })
           );
         });
@@ -533,6 +536,7 @@
           x.textContent = "×";
           x.onclick = () => {
             state.links.splice(i, 1);
+            syncFormDataToState(); // ADDED: Sync before re-render
             save(state);
             renderAll();
           };
@@ -589,13 +593,10 @@
       }
 
       // ====== Events ======
+
+      // ** UPDATED: saveBtn click now just calls the shared sync function and saves **
       document.getElementById("saveBtn").onclick = () => {
-        state.name = fName.value.trim() || "Your Name";
-        state.location = fLocation.value.trim();
-        state.work = fWork.value.trim();
-        state.eduLine = fEdu.value.trim();
-        state.quote = fQuote.value.trim();
-        state.about = fAbout.value.trim();
+        syncFormDataToState();
         state.generated = false;
         save(state);
         renderAll();
@@ -630,6 +631,8 @@
       };
 
       document.getElementById("btnGenerate").onclick = () => {
+        // ** ADDED: Sync form data before checking completeness and generating **
+        syncFormDataToState();
         if (pct(state) < 50) {
           alert(
             "Please fill more fields (Name, Address, About, some Skills, and at least one Education/Experience)."
@@ -644,7 +647,7 @@
           .scrollIntoView({ behavior: "smooth" });
       };
 
-      // Add rows
+      // ** UPDATED: Add rows now calls syncFormDataToState() before saving **
       document.getElementById("addEdu").onclick = () => {
         const t = document.getElementById("eduTitle").value.trim();
         const m = document.getElementById("eduMeta").value.trim();
@@ -653,6 +656,7 @@
         document.getElementById("eduTitle").value = "";
         document.getElementById("eduMeta").value = "";
         state.generated = false;
+        syncFormDataToState(); // ADDED: Sync data before saving and rendering
         save(state);
         renderAll();
       };
@@ -664,6 +668,7 @@
         document.getElementById("expTitle").value = "";
         document.getElementById("expMeta").value = "";
         state.generated = false;
+        syncFormDataToState(); // ADDED: Sync data before saving and rendering
         save(state);
         renderAll();
       };
@@ -676,11 +681,12 @@
         document.getElementById("linkText").value = "";
         document.getElementById("linkUrl").value = "";
         state.generated = false;
+        syncFormDataToState(); // ADDED: Sync data before saving and rendering
         save(state);
         renderAll();
       };
 
-      // Skills add on Enter
+      // ** UPDATED: Skills add on Enter now calls syncFormDataToState() before saving **
       fSkillInput.addEventListener("keydown", (e) => {
         if (e.key === "Enter") {
           e.preventDefault();
@@ -689,6 +695,7 @@
           state.skills.push(v);
           fSkillInput.value = "";
           state.generated = false;
+          syncFormDataToState(); // ADDED: Sync data before saving and rendering
           save(state);
           renderAll();
         }
@@ -703,6 +710,7 @@
         reader.onload = (ev) => {
           state.avatar = ev.target.result; // dataURL
           state.generated = false;
+          syncFormDataToState(); // ADDED: Sync data before saving and rendering
           save(state);
           renderAll();
         };
@@ -711,6 +719,8 @@
 
       // ====== PDF Download (jsPDF) ======
       document.getElementById("btnDownload").onclick = () => {
+        // ** ADDED: Sync form data before checking completeness and downloading **
+        syncFormDataToState();
         if (pct(state) < 40) {
           alert("Please complete more fields before downloading.");
           return;
