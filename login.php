@@ -1,3 +1,68 @@
+<?php
+require_once 'db_connect.php';
+
+$error = '';
+$email = '';
+$user_type = ''; // Will be used to store the user type upon successful login
+
+// Check if user is already logged in, redirect to home.php if true
+if (is_logged_in()) {
+    redirect('home.php');
+}
+
+// Check if form was submitted
+if ($_SERVER["REQUEST_METHOD"] == "POST") {
+    $email = trim($_POST['email']);
+    $password = $_POST['password'];
+    
+    // 1. Basic Validation
+    if (empty($email) || empty($password)) {
+        $error = "Please enter both email and password.";
+    }
+
+    if (empty($error)) {
+        // 2. Hash the input password using SHA256 for comparison
+        $input_password_hash = hash('sha256', $password);
+
+        // 3. Prepare and execute the query to find the user
+        $stmt = $conn->prepare("SELECT user_id, password_hash, user_type, full_name FROM Users WHERE email = ?");
+        $stmt->bind_param("s", $email);
+        $stmt->execute();
+        $result = $stmt->get_result();
+
+        if ($result->num_rows === 1) {
+            $user = $result->fetch_assoc();
+            
+            // 4. Compare the hashed password
+            if ($user['password_hash'] === $input_password_hash) {
+                // Password matches, login successful
+                
+                // 5. Start session and set session variables
+                session_start();
+                $_SESSION['user_id'] = $user['user_id'];
+                $_SESSION['user_type'] = $user['user_type'];
+                $_SESSION['full_name'] = $user['full_name'];
+                
+                // 6. Redirect to the appropriate home page based on user type
+                if ($user['user_type'] === 'admin') {
+                    // Note: Admin page is not created yet, so we redirect to a placeholder
+                    redirect('admin_dashboard.php'); 
+                } else {
+                    redirect('home.php');
+                }
+            } else {
+                // Password incorrect
+                $error = "Invalid email or password.";
+            }
+        } else {
+            // Email not found
+            $error = "Invalid email or password.";
+        }
+
+        $stmt->close();
+    }
+}
+?>
 <!DOCTYPE html>
 <html lang="en">
   <head>
@@ -19,7 +84,7 @@
         <img src="./Human_Figure.png" alt="Graduate" class="figure" />
         <h1 class="title">Good to see you again</h1>
         <p class="sub">
-          Don’t have an account? <a href="signup.html">Create now</a>
+          Don’t have an account? <a href="signup.php">Create now</a>
         </p>
       </section>
 
@@ -27,12 +92,19 @@
       <aside class="card">
         <h2 class="card-title">Log In</h2>
         <p class="card-sub">Welcome back to JobGate</p>
+        
+        <!-- PHP error message -->
+        <?php if ($error): ?>
+          <div style="background-color: #fca5a5; color: #991b1b; padding: 10px; border-radius: 8px; margin-bottom: 15px; font-weight: 700; text-align: center;">
+            <?php echo htmlspecialchars($error); ?>
+          </div>
+        <?php endif; ?>
 
-        <form class="form" action="#" method="post">
+        <form class="form" action="login.php" method="post">
           <!-- Email -->
           <label class="field">
             <div class="input-wrap">
-              <input type="email" name="email" placeholder="Email" required />
+              <input type="email" name="email" placeholder="Email" required value="<?php echo htmlspecialchars($email); ?>" />
             </div>
           </label>
 
@@ -63,7 +135,7 @@
           <!-- Remember + Forgot -->
           <div class="row-between">
             <label class="remember">
-              <input type="checkbox" /> <span>Remember me</span>
+              <input type="checkbox" name="remember" /> <span>Remember me</span>
             </label>
             <a href="#" class="muted">Forgot Password?</a>
           </div>
@@ -72,7 +144,6 @@
           <button
             class="btn-primary"
             type="submit"
-            onclick="window.location.href='home.html'"
           >
             Sign In
           </button>
@@ -108,3 +179,6 @@
     </script>
   </body>
 </html>
+
+<!-- admin1@jobgate.com - adminpass1
+admin2@jobgate.com - adminpass2 -->
