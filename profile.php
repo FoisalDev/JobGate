@@ -101,15 +101,414 @@ $avatarSrc = $profile_photo_url ?: './avatar_placeholder.jpg';
     <link rel="stylesheet" href="profile.css" />
     <script src="https://code.iconify.design/iconify-icon/2.1.0/iconify-icon.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+    
+    <style>
+        /* Base */
+        * {
+          box-sizing: border-box;
+        }
+        html,
+        body {
+          margin: 0;
+          padding: 0;
+          background: #f8fafc;
+          color: #0f172a;
+          font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica,
+            Arial;
+          font-size: 16px;
+        }
+        img {
+          max-width: 100%;
+          display: block;
+        }
+
+        /* Topbar */
+        .topbar {
+          position: sticky;
+          top: 0;
+          z-index: 20;
+          background: #fff;
+          border-bottom: 1px solid #e5e7eb;
+        }
+        .topbar-inner {
+          display: flex;
+          align-items: center;
+          /* FIX: Gap adjusted */
+          gap: 30px; 
+          height: 86px;
+          width: min(1380px, 96%);
+          margin: 0 auto;
+          padding: 0 12px;
+        }
+        .logo {
+          height: clamp(80px, 10vw, 120px);
+          width: auto;
+          object-fit: contain;
+        }
+        /* REMOVED .search-wrap CSS */
+        
+        .top-actions {
+          display: flex;
+          align-items: center;
+          gap: 18px;
+          /* FIX: Push actions to the right in the absence of search bar */
+          margin-left: auto; 
+        }
+        .tlink {
+          color: #0f172a;
+          text-decoration: none;
+          font-weight: 800;
+        }
+        .avatar {
+          width: 40px;
+          height: 40px;
+          border-radius: 999px;
+          object-fit: cover;
+          box-shadow: 0 1px 6px rgba(0, 0, 0, 0.15);
+        }
+
+        /* Layout */
+        .layout {
+          display: grid;
+          grid-template-columns: 260px 1fr;
+          min-height: calc(100vh - 86px);
+        }
+
+        /* Sidebar */
+        .sidebar {
+          background: #0b1d3a;
+          color: #e2e8f0;
+          padding: 12px 14px;
+          /* FIX: Making the sidebar fixed */
+          position: sticky; 
+          top: 86px; 
+          z-index: 10; 
+          display: flex;
+          flex-direction: column;
+          height: calc(100vh - 86px); 
+        }
+        
+        .sbtn {
+          width: 100%;
+          display: flex;
+          align-items: center;
+          gap: 14px;
+          background: transparent;
+          color: #e2e8f0;
+          border: 0;
+          text-align: left;
+          padding: 14px 12px;
+          border-radius: 12px;
+          cursor: pointer;
+          font-weight: 800;
+          margin-bottom: 6px; 
+        }
+        .sbtn:hover {
+          background: rgba(255, 255, 255, 0.06);
+        }
+        .spacer {
+          flex: 1;
+        }
+        .logout {
+          color: #fca5a5;
+          margin-top: auto; 
+          margin-bottom: 0; 
+        }
+        .logout:hover {
+          background: rgba(252, 165, 165, 0.12);
+        }
+
+        /* Main content */
+        .content {
+          padding: 24px 28px 48px;
+          background: #f8fafc;
+        }
+
+        /* Profile head */
+        .profile-head {
+          display: grid;
+          grid-template-columns: 220px 1fr 220px;
+          gap: 16px;
+          align-items: center;
+          margin-bottom: 20px;
+        }
+        .avatar-lg {
+          position: relative;
+          width: 120px;
+          height: 120px;
+          border-radius: 999px;
+          overflow: hidden;
+        }
+        .avatar-lg img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+        }
+        .cam {
+          position: absolute;
+          right: 6px;
+          bottom: 6px;
+          width: 34px;
+          height: 34px;
+          border-radius: 50%;
+          background: #fff;
+          border: 1px solid #e5e7eb;
+          display: grid;
+          place-items: center;
+          cursor: pointer;
+        }
+        .ph-mid h1 {
+          margin: 0;
+          font-size: 26px;
+          font-weight: 900;
+        }
+        .facts {
+          list-style: none;
+          padding: 0;
+          margin: 8px 0 0;
+          display: grid;
+          gap: 6px;
+        }
+        .ph-right {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+        }
+
+        /* Buttons */
+        .btn-edit,
+        .btn-primary,
+        .btn-success,
+        .btn-ghost,
+        .btn-secondary {
+          padding: 10px 14px;
+          border-radius: 10px;
+          font-weight: 800;
+          cursor: pointer;
+          border: none;
+        }
+        .btn-edit {
+          background: #e2e8f0;
+        }
+        .btn-primary {
+          background: #3b82f6;
+          color: #fff;
+        }
+        .btn-success {
+          background: #16a34a;
+          color: #fff;
+        }
+        .btn-ghost {
+          background: #f8fafc;
+          border: 1px solid #e2e8f0;
+        }
+        .btn-secondary {
+          background: #e5e7eb;
+        }
+
+        /* Grid / Cards */
+        .grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 18px;
+        }
+        .card {
+          background: #fff;
+          border: 1px solid rgba(15, 23, 42, 0.08);
+          border-radius: 12px;
+          box-shadow: 0 14px 32px rgba(2, 6, 23, 0.06);
+          padding: 16px;
+        }
+
+        /* Form */
+        .form label {
+          display: block;
+          font-weight: 800;
+          margin-top: 10px;
+        }
+        .form input,
+        .form textarea {
+          width: 100%;
+          border: 1px solid #e2e8f0;
+          border-radius: 10px;
+          padding: 10px;
+          margin-top: 6px;
+          font-size: 14px;
+        }
+        .row2 {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 10px;
+        }
+        .tagbox {
+          display: flex;
+          gap: 8px;
+          flex-wrap: wrap;
+          align-items: center;
+          border: 1px dashed #cbd5e1;
+          padding: 8px;
+          border-radius: 10px;
+          margin-top: 6px;
+        }
+        .tags {
+          display: flex;
+          gap: 6px;
+          flex-wrap: wrap;
+        }
+        .pill {
+          background: #e0f2fe;
+          padding: 4px 8px;
+          border-radius: 999px;
+          font-size: 12px;
+        }
+        .pill .pill-x {
+          margin-left: 6px;
+          background: transparent;
+          border: 0;
+          cursor: pointer;
+        }
+
+        .group {
+          margin-top: 16px;
+        }
+        .list .li {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          justify-content: space-between;
+          border: 1px solid #e5e7eb;
+          border-radius: 8px;
+          padding: 8px 10px;
+          margin: 6px 0;
+        }
+        .li .t {
+          font-weight: 800;
+        }
+        .li .s {
+          color: #475569;
+          font-size: 13px;
+        }
+        .li .x {
+          background: #fee2e2;
+          border: 0;
+          border-radius: 6px;
+          color: #991b1b;
+          padding: 4px 8px;
+          cursor: pointer;
+        }
+
+        .empty-hint::before {
+          content: attr(data-hint);
+          display: none;
+          color: #64748b;
+          font-size: 13px;
+          background: #f8fafc;
+          padding: 10px;
+          border: 1px dashed #cbd5e1;
+          border-radius: 8px;
+        }
+        .empty-hint.show-hint::before {
+          display: block;
+        }
+
+        /* Resume */
+        .resume-head {
+          display: flex;
+          gap: 12px;
+          align-items: center;
+          margin-bottom: 12px;
+        }
+        .resume-head img {
+          width: 90px;
+          height: 90px;
+          border-radius: 12px;
+          object-fit: cover;
+        }
+        .resume-head h2 {
+          margin: 0;
+          font-size: 22px;
+          font-weight: 900;
+        }
+        .resume-body {
+          display: grid;
+          gap: 14px;
+        }
+        .r-block h4 {
+          margin: 0 0 8px;
+          font-size: 16px;
+          font-weight: 900;
+        }
+        .r-skill-list,
+        .r-list {
+          margin: 0 0 0 18px;
+          color: #334155;
+        }
+        .r-list li {
+          margin: 6px 0;
+        }
+        .address-block {
+          border: 1px dashed #cbd5e1;
+          background: #f8fafc;
+          padding: 10px 12px;
+          border-radius: 8px;
+          margin: 0 0 10px 0;
+        }
+        .addr-title {
+          font-weight: 900;
+          margin-bottom: 6px;
+        }
+        .addr-text {
+          color: #334155;
+        }
+
+        /* Responsive */
+        @media (max-width: 1100px) {
+          .grid {
+            grid-template-columns: 1fr;
+          }
+          .profile-head {
+            grid-template-columns: 220px 1fr;
+          }
+          .ph-right {
+            grid-column: 1 / -1;
+            flex-direction: row;
+            gap: 8px;
+          }
+        }
+        @media (max-width: 820px) {
+          .layout {
+            grid-template-columns: 1fr;
+          }
+          .top-actions {
+            display: none;
+          }
+        }
+
+        /* Print — (kept for fallback) */
+        @media print {
+          body * {
+            visibility: hidden;
+          }
+          #resumeCard,
+          #resumeCard * {
+            visibility: visible;
+          }
+          #resumeCard {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            box-shadow: none;
+            border: 0;
+          }
+        }
+    </style>
   </head>
   <body>
     <header class="topbar">
       <div class="topbar-inner">
         <img src="./JobGate_logo.png" alt="JobGate" class="logo" />
-        <div class="search-wrap" role="search">
-          <iconify-icon icon="mdi:magnify" class="sicon" aria-hidden="true"></iconify-icon>
-          <input type="text" placeholder="Search JobGate" aria-label="Search JobGate" />
-        </div>
+        
         <nav class="top-actions" aria-label="Top actions">
           <a href="home.php" class="tlink">Home</a>
           <a href="<?php echo htmlspecialchars($profilePage); ?>" class="tlink">Profile</a>

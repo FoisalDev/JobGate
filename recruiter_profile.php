@@ -205,6 +205,53 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ( $_POST['action'] ?? '' ) === 'sav
     }
 }
 
+/* POST: Delete Job */
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ( $_POST['action'] ?? '' ) === 'delete_job') {
+    try {
+        if (!$recruiter_id) throw new Exception("No recruiter profile found.");
+        $job_id_to_delete = sanitize_input($_POST['job_id'] ?? '');
+
+        if (empty($job_id_to_delete)) throw new Exception("Job ID missing for deletion.");
+
+        // NOTE: JobApplication and JobAssessmentRequirements tables might have foreign keys
+        // pointing to Jobs. You might need to delete from those tables first, 
+        // or ensure your foreign keys have ON DELETE CASCADE set.
+        
+        $conn->begin_transaction();
+
+        // Optional: Delete related entries (if FKs don't cascade)
+        // $stDelApp = $conn->prepare("DELETE FROM JobApplication WHERE job_id = ?");
+        // $stDelApp->bind_param("s", $job_id_to_delete);
+        // $stDelApp->execute(); $stDelApp->close();
+
+        // $stDelAssess = $conn->prepare("DELETE FROM JobAssessmentRequirements WHERE job_id = ?");
+        // $stDelAssess->bind_param("s", $job_id_to_delete);
+        // $stDelAssess->execute(); $stDelAssess->close();
+
+
+        // Delete the job itself, ensuring the current user owns it
+        $sqlDel = "DELETE FROM Jobs WHERE job_id = ? AND recruiter_id = ?";
+        $stDel = $conn->prepare($sqlDel);
+        $stDel->bind_param("ss", $job_id_to_delete, $recruiter_id);
+        $stDel->execute();
+        
+        if ($stDel->affected_rows === 0) {
+            $conn->rollback();
+            throw new Exception("Deletion failed. Job not found or not owned by you.");
+        }
+        $stDel->close();
+        
+        $conn->commit();
+        header("Location: recruiter_profile.php?msg=deleted");
+        exit;
+
+    } catch (Throwable $e) {
+        if ($conn && $conn->errno) $conn->rollback();
+        $message = "Deletion Error: ".$e->getMessage();
+        $message_type = 'error';
+    }
+}
+
 
 /* POST: Create or Update job */
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ( $_POST['action'] ?? '' ) === 'post_job') {
@@ -360,6 +407,9 @@ if (isset($_GET['msg'])) {
         $message_type = 'success';
     } elseif ($_GET['msg'] === 'updated') {
         $message = "Job updated successfully!";
+        $message_type = 'success';
+    } elseif ($_GET['msg'] === 'deleted') {
+        $message = "Job successfully deleted!";
         $message_type = 'success';
     }
 }
@@ -700,15 +750,27 @@ try {
             </div>
           </div>
 
-          <div class="form-actions" style="margin-top:10px">
-            <button type="submit" class="btn-primary">
-                <iconify-icon icon="<?php echo $job_to_edit ? 'mdi:content-save-outline' : 'mdi:send'; ?>"></iconify-icon> 
-                <?php echo $job_to_edit ? 'Update Job' : 'Publish Job'; ?>
-            </button>
+          <div class="form-actions" style="margin-top:10px; display: flex; justify-content: space-between; align-items: center;">
+            <div style="display: flex; gap: 10px;">
+                <button type="submit" class="btn-primary">
+                    <iconify-icon icon="<?php echo $job_to_edit ? 'mdi:content-save-outline' : 'mdi:send'; ?>"></iconify-icon> 
+                    <?php echo $job_to_edit ? 'Update Job' : 'Publish Job'; ?>
+                </button>
+                <?php if ($job_to_edit): ?>
+                <a href="recruiter_profile.php" class="btn-ghost" style="text-decoration: none;">
+                    <iconify-icon icon="mdi:cancel"></iconify-icon> Cancel Edit
+                </a>
+                <?php endif; ?>
+            </div>
+            
             <?php if ($job_to_edit): ?>
-              <a href="recruiter_profile.php" class="btn-ghost" style="text-decoration: none;">
-                <iconify-icon icon="mdi:cancel"></iconify-icon> Cancel Edit
-              </a>
+            <button type="button" 
+                    id="deleteJobBtn"
+                    class="btn-primary" 
+                    style="background: #dc2626;"
+                    onclick="confirmDelete('<?php echo htmlspecialchars($job_to_edit['job_id']); ?>')">
+                <iconify-icon icon="mdi:delete"></iconify-icon> Delete Job
+            </button>
             <?php endif; ?>
           </div>
         </form>
@@ -756,6 +818,11 @@ try {
     </main>
   </div>
   
+  <form id="deleteForm" method="POST" action="recruiter_profile.php" style="display: none;">
+      <input type="hidden" name="action" value="delete_job">
+      <input type="hidden" name="job_id" id="deleteJobId">
+  </form>
+
   <script>
     // ** Photo Upload/Preview Functionality for User Profile Photo **
     const btnPhotoUpload = document.getElementById('btnPhotoUpload');
@@ -785,6 +852,14 @@ try {
       }
     }
     
+    // ** Job Deletion Functionality **
+    function confirmDelete(jobId) {
+        if (confirm("Are you sure you want to delete this job? This action cannot be undone.")) {
+            document.getElementById('deleteJobId').value = jobId;
+            document.getElementById('deleteForm').submit();
+        }
+    }
+
     // Call scroll function if job_id is present in the URL on page load
     <?php if ($job_to_edit): ?>
         scrollToJobPost();
