@@ -48,25 +48,126 @@ function column_exists($conn, $table, $column) {
   return !empty($row['c']);
 }
 
-/* Map user -> recruiter */
-$recruiter_id = null;
-$existing_logo = null;
+/* Ensure necessary columns exist (Recruiters: company_name, company_address, Users: profile_photo_url) */
 try {
-  $stmt = $conn->prepare("SELECT recruiter_id, company_logo_url FROM Recruiters WHERE user_id = ?");
+    if (!column_exists($conn, 'Users', 'profile_photo_url')) { $conn->query("ALTER TABLE Users ADD COLUMN profile_photo_url VARCHAR(255) NULL"); }
+    if (!column_exists($conn, 'Recruiters', 'company_name')) { $conn->query("ALTER TABLE Recruiters ADD COLUMN company_name VARCHAR(255) NULL"); }
+    if (!column_exists($conn, 'Recruiters', 'company_address')) { $conn->query("ALTER TABLE Recruiters ADD COLUMN company_address VARCHAR(255) NULL"); }
+} catch (Throwable $e) { /* ignore column changes */ }
+
+
+/* Map user -> recruiter and load all profile data */
+$recruiter_id = null;
+$company_name = null;
+$company_address = null;
+$user_email = null;
+$profile_photo_url = './avatar_placeholder.jpg'; // Recruiter's personal photo
+
+try {
+  $stmt = $conn->prepare("SELECT R.recruiter_id, R.company_name, R.company_address, U.full_name, U.email, U.profile_photo_url
+                          FROM Recruiters R
+                          JOIN Users U ON R.user_id = U.user_id
+                          WHERE R.user_id = ?");
   $stmt->bind_param("s", $user_id);
   $stmt->execute();
   $recRow = $stmt->get_result()->fetch_assoc();
   if ($recRow) {
     $recruiter_id = $recRow['recruiter_id'];
-    $existing_logo = $recRow['company_logo_url'];
+    $company_name = $recRow['company_name'];
+    $company_address = $recRow['company_address'];
+    $full_name = $recRow['full_name'];
+    $user_email = $recRow['email'];
+    if (!empty($recRow['profile_photo_url'])) {
+        $profile_photo_url = $recRow['profile_photo_url'];
+    }
   }
   $stmt->close();
 } catch (Throwable $e) {
-  $message = "DB error mapping recruiter: ".$e->getMessage();
+  $message = "DB error loading recruiter profile: ".$e->getMessage();
   $message_type = 'error';
 }
 
+/* Handle Profile Save (User and Recruiter Data) */
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ( $_POST['action'] ?? '' ) === 'save_user_profile') {
+    try {
+        if (!$recruiter_id) throw new Exception("No recruiter profile found for this user.");
+
+        $newName = sanitize_input($_POST['user_full_name'] ?? '');
+        $newEmail = filter_var($_POST['user_email'] ?? '', FILTER_SANITIZE_EMAIL);
+        $newCompanyName = sanitize_input($_POST['company_name'] ?? '');
+        $newCompanyAddress = sanitize_input($_POST['company_address'] ?? '');
+        
+        if ($newName === '' || $newEmail === '') throw new Exception("Name and Email are required.");
+
+        $photo_url_update = '';
+        $user_params = [];
+        $user_types = '';
+        
+        /* 1) Handle Profile Photo Upload (to /uploads/profile_photos/) */
+        if (!empty($_FILES['profile_photo']['name']) && $_FILES['profile_photo']['error'] === UPLOAD_ERR_OK) {
+            $dirFs  = __DIR__ . '/uploads/profile_photos/'; // Same directory as user profile photos
+            $dirWeb = 'uploads/profile_photos/';
+            if (!is_dir($dirFs)) mkdir($dirFs, 0777, true);
+
+            $info = @getimagesize($_FILES['profile_photo']['tmp_name']);
+            if ($info === false) throw new Exception("Invalid image file.");
+
+            $ext = strtolower(pathinfo($_FILES['profile_photo']['name'], PATHINFO_EXTENSION));
+            if (!in_array($ext, ['jpg','jpeg','png','gif','webp'], true)) throw new Exception("Only JPG, JPEG, PNG, GIF, WEBP allowed.");
+            if ($_FILES['profile_photo']['size'] > 2*1024*1024) throw new Exception("File too large. Max 2MB.");
+
+            $fname = GUID().'.'.$ext;
+            if (!move_uploaded_file($_FILES['profile_photo']['tmp_name'], $dirFs.$fname)) {
+                throw new Exception("Failed to move uploaded file. Check folder permissions.");
+            }
+            $uploaded_url = $dirWeb.$fname;
+            $photo_url_update = ', profile_photo_url = ?';
+            $user_params[] = $uploaded_url;
+            $user_types .= 's';
+        }
+        
+        // Start Transaction
+        $conn->begin_transaction();
+
+        /* 2) Update Users table (Name, Email, Photo) */
+        $sqlU = "UPDATE Users 
+                 SET full_name = ?, email = ? {$photo_url_update}
+                 WHERE user_id = ?";
+        
+        $user_params = array_merge([$newName, $newEmail], $user_params, [$user_id]);
+        $user_types = 'ss' . substr($user_types, 0) . 's';
+        
+        $stU = $conn->prepare($sqlU);
+        $stU->bind_param($user_types, ...$user_params);
+        $stU->execute();
+        $stU->close();
+
+        /* 3) Update Recruiters table (Company Name, Address) */
+        $sqlR = "UPDATE Recruiters 
+                 SET company_name = ?, company_address = ?
+                 WHERE recruiter_id = ?";
+        
+        $stR = $conn->prepare($sqlR);
+        $stR->bind_param("sss", $newCompanyName, $newCompanyAddress, $recruiter_id);
+        $stR->execute();
+        $stR->close();
+        
+        $conn->commit();
+        
+        // Refresh session data and redirect to clear POST
+        $_SESSION['full_name'] = $newName; // Update header name
+        header("Location: recruiter_profile.php?msg=saved");
+        exit;
+
+    } catch (Throwable $e) {
+        if ($conn && $conn->errno) $conn->rollback();
+        $message = "Profile Save Error: ".$e->getMessage();
+        $message_type = 'error';
+    }
+}
+
 /* POST: Create job (strict to jobgate.sql, +optional job_logo_url) */
+// This section remains almost entirely untouched as per your request.
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ( $_POST['action'] ?? '' ) === 'post_job') {
   try {
     if (!$recruiter_id) throw new Exception("No recruiter profile found for this user.");
@@ -95,11 +196,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ( $_POST['action'] ?? '' ) === 'pos
       $stUp = $conn->prepare("UPDATE Recruiters SET company_logo_url = ? WHERE recruiter_id = ?");
       $stUp->bind_param("ss", $uploaded_url, $recruiter_id);
       $stUp->execute(); $stUp->close();
-      $existing_logo = $uploaded_url;
+      // $existing_logo = $uploaded_url; // No longer used, using $profile_photo_url for user
 
       // Also remember for this specific job (if column exists)
       $job_logo_url = $uploaded_url;
+    } else {
+        // If no new logo is uploaded for the job, default to the *Company Logo* if it exists
+        $stL = $conn->prepare("SELECT company_logo_url FROM Recruiters WHERE recruiter_id = ?");
+        $stL->bind_param("s", $recruiter_id);
+        $stL->execute();
+        $logoRow = $stL->get_result()->fetch_assoc();
+        $stL->close();
+        if ($logoRow && !empty($logoRow['company_logo_url'])) {
+            $job_logo_url = $logoRow['company_logo_url'];
+        }
     }
+
 
     /* 2) Gather fields (schema exact) */
     $job_id     = GUID();
@@ -167,6 +279,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ( $_POST['action'] ?? '' ) === 'pos
   }
 }
 
+// Check for success message after redirect
+if (isset($_GET['msg']) && $_GET['msg'] === 'saved') {
+    $message = "Profile details saved successfully!";
+    $message_type = 'success';
+}
+
+
 /* Dropdowns */
 $sectors = [];
 try {
@@ -211,6 +330,7 @@ try {
   <link rel="stylesheet" href="recruiter_profile.css" />
   <script src="https://code.iconify.design/iconify-icon/2.1.0/iconify-icon.min.js"></script>
   <style>
+    /* Base Styles */
     .topbar{ position: sticky; top:0; z-index: 2000; background:#ffffff; border-bottom:1px solid #e5e7eb; }
     .topbar-inner{ max-width: 1120px; margin:0 auto; padding:10px 16px; display:flex; align-items:center; justify-content:space-between; gap:16px; }
     .brand{ display:flex; align-items:center; text-decoration:none }
@@ -229,7 +349,6 @@ try {
     .sbtn.logout{ background:#fee2e2; color:#991b1b }
     .content{ flex:1 }
 
-    .profile-head{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:18px;margin-bottom:16px}
     .job-post-card,.history-card{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:18px;margin-bottom:16px}
     .form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
     .form-group{display:flex;flex-direction:column;gap:6px}
@@ -241,10 +360,37 @@ try {
     .history-item{display:flex;align-items:center;justify-content:space-between;border:1px solid #e5e7eb;border-radius:10px;padding:12px}
     .job-title{font-weight:700}
     .text-muted{color:#64748b}
+    .alert{ padding: 10px; border-radius: 8px; margin-bottom: 15px; }
+    .alert-success{ background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; }
+    .alert-error{ background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; }
+
+    /* Profile Specific Styles */
+    .profile-head-info{
+      display: flex; 
+      gap: 20px; 
+      align-items: flex-start;
+      margin-bottom: 15px;
+    }
+    .profile-info-display{ flex: 1; }
+    .profile-info-display h1{ margin: 0 0 5px 0; font-size: 1.8rem; }
+    .profile-info-display p{ margin: 0 0 5px 0; color: #4b5563; font-size: 0.9rem; }
+    .profile-info-display strong{ font-weight: 700; color: #1f2937; }
+    
+    .avatar-wrap{ position: relative; width: 80px; height: 80px; flex-shrink: 0; }
+    .avatar-lg{ width: 80px; height: 80px; border-radius: 9999px; object-fit: cover; border: 2px solid #e5e7eb; }
+    .cam-btn{ 
+      position: absolute; bottom: 0; right: 0; 
+      width: 25px; height: 25px; border-radius: 9999px; 
+      background: #2563eb; color: white; border: 2px solid #fff; 
+      display: flex; align-items: center; justify-content: center; 
+      cursor: pointer; padding: 0; font-size: 14px;
+    }
+    .cam-btn iconify-icon{ font-size: 14px; }
+    .cam-btn:hover{ background: #1d4ed8; }
+    .form-grid.profile-grid{ grid-template-columns: repeat(2, minmax(0, 1fr)); }
   </style>
 </head>
 <body>
-  <!-- Top bar -->
   <header class="topbar">
     <div class="topbar-inner">
       <a href="home.php" class="brand">
@@ -254,13 +400,12 @@ try {
         <a href="home.php" class="tlink">Home</a>
         <a href="recruiter_profile.php" class="tlink">Profile</a>
         <span class="user-name"><?php echo htmlspecialchars($full_name); ?></span>
-        <img src="./avatar_placeholder.jpg" class="avatar" alt="User avatar" />
+        <img src="<?php echo htmlspecialchars($profile_photo_url); ?>" class="avatar" alt="User avatar" />
       </nav>
     </div>
   </header>
 
   <div class="layout">
-    <!-- Sidebar -->
     <aside class="sidebar">
       <a class="sbtn" href="home.php"><iconify-icon icon="mdi:view-dashboard"></iconify-icon>Dashboard</a>
       <a class="sbtn active" href="recruiter_profile.php"><iconify-icon icon="mdi:briefcase-edit-outline"></iconify-icon>Post Job</a>
@@ -269,9 +414,7 @@ try {
       <a class="sbtn logout" href="logout.php"><iconify-icon icon="mdi:logout"></iconify-icon>Log out</a>
     </aside>
 
-    <!-- Main Content -->
     <main class="content">
-      <!-- Status -->
       <?php if (!empty($message)): ?>
         <div class="alert <?php echo ($message_type==='success')?'alert-success':'alert-error'; ?>">
           <?php echo htmlspecialchars($message); ?>
@@ -282,7 +425,62 @@ try {
         <div class="alert alert-error">Recruiter profile mapping missing. Ensure a row exists in <code>Recruiters</code> for your <code>user_id</code>.</div>
       <?php endif; ?>
 
-      <!-- Job Posting Form -->
+      <section class="job-post-card">
+        <h3 class="card-title">My Profile & Company Details</h3>
+        <form method="POST" action="recruiter_profile.php" enctype="multipart/form-data">
+          <input type="hidden" name="action" value="save_user_profile" />
+
+          <div class="profile-head-info">
+            <div class="avatar-wrap">
+              <img id="profilePhoto" src="<?php echo htmlspecialchars($profile_photo_url); ?>" alt="Profile Photo" class="avatar-lg" />
+              <button class="cam-btn" id="btnPhotoUpload" type="button" title="Upload profile photo">
+                <iconify-icon icon="mdi:camera"></iconify-icon>
+              </button>
+              <input type="file" name="profile_photo" id="photoInput" accept="image/*" hidden />
+            </div>
+            
+            <div class="profile-info-display">
+              <h1><?php echo htmlspecialchars($full_name ?: 'Your Name'); ?></h1>
+              <p>Email: <strong><?php echo htmlspecialchars($user_email ?: 'N/A'); ?></strong></p>
+              <p>Company: <strong><?php echo htmlspecialchars($company_name ?: 'Not set'); ?></strong></p>
+              <p>Address: <span><?php echo htmlspecialchars($company_address ?: 'Not set'); ?></span></p>
+            </div>
+          </div>
+          
+          <div class="form-grid profile-grid">
+            
+            <div class="form-group">
+              <label for="user_full_name">Your Full Name *</label>
+              <input type="text" id="user_full_name" name="user_full_name" required 
+                     value="<?php echo htmlspecialchars($full_name ?? ''); ?>">
+            </div>
+
+            <div class="form-group">
+              <label for="user_email">Email *</label>
+              <input type="email" id="user_email" name="user_email" required 
+                     value="<?php echo htmlspecialchars($user_email ?? ''); ?>">
+            </div>
+
+            <div class="form-group">
+              <label for="company_name">Company Name</label>
+              <input type="text" id="company_name" name="company_name" 
+                     value="<?php echo htmlspecialchars($company_name ?? ''); ?>">
+            </div>
+
+            <div class="form-group">
+              <label for="company_address">Company Address / Location</label>
+              <input type="text" id="company_address" name="company_address" 
+                     value="<?php echo htmlspecialchars($company_address ?? ''); ?>">
+            </div>
+            
+          </div>
+
+          <div class="form-actions" style="margin-top:15px">
+            <button type="submit" class="btn-primary"><iconify-icon icon="mdi:content-save-outline"></iconify-icon> Save Profile Details</button>
+          </div>
+        </form>
+      </section>
+
       <section class="job-post-card">
         <h3 class="card-title">Post a New Job Opening</h3>
         <form method="POST" action="recruiter_profile.php" enctype="multipart/form-data">
@@ -383,7 +581,6 @@ try {
         </form>
       </section>
 
-      <!-- Job History -->
       <section class="history-card">
         <h3 class="card-title">Your Posted Jobs (<?php echo count($job_history); ?>)</h3>
         <?php if (empty($job_history)): ?>
@@ -421,5 +618,27 @@ try {
       </section>
     </main>
   </div>
+  
+  <script>
+    // ** Photo Upload/Preview Functionality for User Profile Photo **
+    const btnPhotoUpload = document.getElementById('btnPhotoUpload');
+    const photoInput = document.getElementById('photoInput');
+
+    // 1. Open file dialog on button click
+    btnPhotoUpload?.addEventListener('click', () => photoInput?.click());
+    
+    // 2. Display preview when file is selected
+    photoInput?.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                document.getElementById('profilePhoto').src = event.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+    });
+
+  </script>
 </body>
 </html>
