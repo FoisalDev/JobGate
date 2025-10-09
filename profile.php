@@ -432,6 +432,18 @@ $nm = split_name($full_name);
     </div>
 
     <script>
+        // ---- minimal JS to trigger upload without UI change ----
+        const btnAvatar = document.getElementById('btnAvatar');
+      const avatarInput = document.getElementById('avatarInput');
+      const avatarForm = document.getElementById('avatarForm');
+
+      btnAvatar?.addEventListener('click', () => avatarInput?.click());
+      avatarInput?.addEventListener('change', () => {
+        if (avatarInput.files && avatarInput.files[0]) {
+          avatarForm.submit(); // post to server -> saves -> redirects
+        }
+      });
+
       // ====== State & storage ======
       const KEY = "jobgate_profile_v9";
       const load = () => JSON.parse(localStorage.getItem(KEY) || "null");
