@@ -1,5 +1,4 @@
 <?php
-// profile.php — server-backed avatar + name (no design change)
 session_start();
 require_once 'db_connect.php';
 
@@ -14,101 +13,83 @@ $user_id   = $_SESSION['user_id'];
 $user_type = $_SESSION['user_type'] ?? 'applicant';
 $full_name = $_SESSION['full_name'] ?? 'Your Name';
 
-// ---- Ensure Users.profile_photo_url column exists (adds once if missing) ----
+/* Ensure Users.profile_photo_url exists (best-effort) */
 try {
-  $chk = $conn->prepare("SELECT COUNT(*) c FROM INFORMATION_SCHEMA.COLUMNS
-                         WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME='Users' AND COLUMN_NAME='profile_photo_url'");
-  $chk->execute();
-  $c = $chk->get_result()->fetch_assoc();
-  $chk->close();
-  if (empty($c['c'])) {
-    $conn->query("ALTER TABLE Users ADD COLUMN profile_photo_url VARCHAR(255) NULL");
-  }
-} catch (Throwable $e) {
-  // ignore schema add errors (shared hosting etc.)
-}
+  $q = $conn->prepare("SELECT COUNT(*) c FROM INFORMATION_SCHEMA.COLUMNS
+                       WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME='Users' AND COLUMN_NAME='profile_photo_url'");
+  $q->execute(); $row = $q->get_result()->fetch_assoc(); $q->close();
+  if (empty($row['c'])) { $conn->query("ALTER TABLE Users ADD COLUMN profile_photo_url VARCHAR(255) NULL"); }
+} catch (Throwable $e) { /* ignore */ }
 
-// ---- Handle avatar upload ----
+/* Load current profile */
 $profile_photo_url = null;
-$msg = '';
 try {
-  // Load current value
-  $stmt = $conn->prepare("SELECT profile_photo_url, full_name FROM Users WHERE user_id = ? LIMIT 1");
+  $stmt = $conn->prepare("SELECT full_name, profile_photo_url FROM Users WHERE user_id = ? LIMIT 1");
   $stmt->bind_param("s", $user_id);
   $stmt->execute();
-  $info = $stmt->get_result()->fetch_assoc();
+  $u = $stmt->get_result()->fetch_assoc();
   $stmt->close();
-
-  if ($info) {
-    $profile_photo_url = $info['profile_photo_url'] ?: null;
-    // refresh full_name in session (if changed elsewhere)
-    if (!empty($info['full_name'])) {
-      $full_name = $info['full_name'];
-      $_SESSION['full_name'] = $full_name;
-    }
+  if ($u) {
+    $full_name = $u['full_name'] ?: $full_name;
+    $_SESSION['full_name'] = $full_name; // refresh session
+    $profile_photo_url = $u['profile_photo_url'] ?: null;
   }
+} catch (Throwable $e) {}
 
-  if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'upload_avatar') {
+/* Handle avatar upload */
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'upload_avatar') {
+  try {
     if (!empty($_FILES['avatar_file']['name']) && $_FILES['avatar_file']['error'] === UPLOAD_ERR_OK) {
       $dirFs  = __DIR__ . '/uploads/profile_photos/';
       $dirWeb = 'uploads/profile_photos/';
-      if (!is_dir($dirFs)) { mkdir($dirFs, 0777, true); }
+      if (!is_dir($dirFs)) mkdir($dirFs, 0777, true);
 
       $info = @getimagesize($_FILES['avatar_file']['tmp_name']);
-      if ($info === false) { throw new Exception("Invalid image file."); }
-
+      if ($info === false) throw new Exception("Invalid image file.");
       $ext = strtolower(pathinfo($_FILES['avatar_file']['name'], PATHINFO_EXTENSION));
-      if (!in_array($ext, ['jpg','jpeg','png','gif','webp'])) {
-        throw new Exception("Only JPG, JPEG, PNG, GIF, WEBP allowed.");
-      }
-      if ($_FILES['avatar_file']['size'] > 2*1024*1024) {
-        throw new Exception("File too large (max 2MB).");
-      }
+      if (!in_array($ext, ['jpg','jpeg','png','gif','webp'])) throw new Exception("Only JPG, JPEG, PNG, GIF, WEBP allowed.");
+      if ($_FILES['avatar_file']['size'] > 2*1024*1024) throw new Exception("Max 2MB allowed.");
 
-      // unique filename
-      $name = bin2hex(random_bytes(8)).'.'.$ext;
-      if (!move_uploaded_file($_FILES['avatar_file']['tmp_name'], $dirFs.$name)) {
-        throw new Exception("Failed to save file. Check folder permissions.");
+      $fname = bin2hex(random_bytes(8)).'.'.$ext;
+      if (!move_uploaded_file($_FILES['avatar_file']['tmp_name'], $dirFs.$fname)) {
+        throw new Exception("Failed to save file. Check folder permission (must be 0777 or 0755).");
       }
-
-      $newUrl = $dirWeb.$name;
-
-      // Update DB
+      $url = $dirWeb.$fname;
       $up = $conn->prepare("UPDATE Users SET profile_photo_url = ? WHERE user_id = ?");
-      $up->bind_param("ss", $newUrl, $user_id);
+      $up->bind_param("ss", $url, $user_id);
       $up->execute(); $up->close();
 
-      // Reflect immediately
-      $profile_photo_url = $newUrl;
-      $msg = 'Profile photo updated.';
+      // Refresh session-side (header image)
+      $profile_photo_url = $url;
+      header("Location: profile.php"); // avoid resubmit
+      exit;
     } else {
-      throw new Exception("Please select a valid image.");
+      throw new Exception("Please choose an image.");
     }
-
-    // Hard redirect to avoid resubmission + to refresh <img>
-    header("Location: profile.php");
-    exit;
+  } catch (Throwable $e) {
+    $upload_error = $e->getMessage();
   }
-} catch (Throwable $e) {
-  $msg = $e->getMessage();
 }
 
-// Decide header profile link
+/* Handle AJAX name save */
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'save_name') {
+  header('Content-Type: application/json');
+  try {
+    $newName = trim($_POST['full_name'] ?? '');
+    if ($newName === '') throw new Exception("Name is required.");
+    $st = $conn->prepare("UPDATE Users SET full_name = ? WHERE user_id = ?");
+    $st->bind_param("ss", $newName, $user_id);
+    $st->execute(); $st->close();
+    $_SESSION['full_name'] = $newName;
+    echo json_encode(['ok'=>true,'full_name'=>$newName,'avatar'=>$profile_photo_url]);
+  } catch (Throwable $e) {
+    echo json_encode(['ok'=>false,'error'=>$e->getMessage()]);
+  }
+  exit;
+}
+
 $profilePage = ($user_type === 'recruiter') ? 'recruiter_profile.php' : 'profile.php';
-
-// Avatar fallback
 $avatarSrc = $profile_photo_url ?: './avatar_placeholder.jpg';
-
-// Split name (first + last) just for header display if needed later
-function split_name($full) {
-  $full = trim($full);
-  if ($full === '') return ['first'=>'Your', 'last'=>'Name'];
-  $parts = preg_split('/\s+/', $full);
-  $first = array_shift($parts);
-  $last = count($parts) ? implode(' ', $parts) : '';
-  return ['first'=>$first, 'last'=>$last];
-}
-$nm = split_name($full_name);
 ?>
 <!DOCTYPE html>
 <html lang="bn">
@@ -132,7 +113,6 @@ $nm = split_name($full_name);
         <nav class="top-actions" aria-label="Top actions">
           <a href="home.php" class="tlink">Home</a>
           <a href="<?php echo htmlspecialchars($profilePage); ?>" class="tlink">Profile</a>
-          <!-- Header avatar from DB -->
           <img src="<?php echo htmlspecialchars($avatarSrc); ?>" class="avatar" alt="User avatar" />
         </nav>
       </div>
@@ -165,51 +145,39 @@ $nm = split_name($full_name);
       </aside>
 
       <main class="content">
-        <?php if (!empty($msg)): ?>
-          <div style="background:#eff6ff;border:1px solid #bfdbfe;color:#1e3a8a;padding:10px 12px;border-radius:10px;margin-bottom:10px;">
-            <?php echo htmlspecialchars($msg); ?>
+        <?php if (!empty($upload_error)): ?>
+          <div style="background:#fee2e2;color:#7f1d1d;border:1px solid #fecaca;padding:10px;border-radius:10px;margin-bottom:10px;">
+            <?php echo htmlspecialchars($upload_error); ?>
           </div>
         <?php endif; ?>
 
         <section class="profile-head">
           <div class="ph-left">
-            <div class="avatar-lg">
-              <!-- Big profile avatar from DB -->
-              <img id="phAvatar" src="<?php echo htmlspecialchars($avatarSrc); ?>" alt="avatar" />
-              <button class="cam" id="btnAvatar" title="Upload photo from device">
-                <iconify-icon icon="mdi:camera"></iconify-icon>
-              </button>
-              <!-- Hidden form for avatar upload (no design change) -->
-              <form id="avatarForm" method="POST" action="profile.php" enctype="multipart/form-data">
-                <input type="hidden" name="action" value="upload_avatar">
-                <input type="file" name="avatar_file" id="avatarInput" accept="image/*" hidden />
-              </form>
-            </div>
+
+          <div class="avatar-lg">
+  <img id="phAvatar" src="<?= htmlspecialchars($avatarSrc) ?>" alt="avatar" />
+  <button class="cam" id="btnAvatar" type="button" title="Upload photo from device">
+    <iconify-icon icon="mdi:camera"></iconify-icon>
+  </button>
+
+  <form id="avatarForm" method="POST" action="profile.php" enctype="multipart/form-data">
+    <input type="hidden" name="action" value="upload_avatar">
+    <input type="file" name="avatar_file" id="avatarInput" accept="image/*" hidden />
+  </form>
+</div>
+
             <figcaption id="quote">“Life is a full of journey”</figcaption>
           </div>
 
           <div class="ph-mid">
-            <!-- Auto name from DB -->
             <h1 id="fullName"><?php echo htmlspecialchars($full_name); ?></h1>
             <ul class="facts">
-              <li><iconify-icon icon="mdi:map-marker-outline"></iconify-icon>
-                Address: <span id="locLine">—</span>
-              </li>
-              <li><iconify-icon icon="mdi:briefcase-variant-outline"></iconify-icon>
-                Works at: <span id="workLine">—</span>
-              </li>
-              <li><iconify-icon icon="mdi:school-outline"></iconify-icon>
-                Studies: <span id="eduLine">—</span>
-              </li>
-              <li><iconify-icon icon="mdi:star-outline"></iconify-icon>
-                Skills: <span id="skillsLine">—</span>
-              </li>
-              <li><iconify-icon icon="mdi:file-document-outline"></iconify-icon>
-                <span id="resumeLine">Resume — Not generated</span>
-              </li>
-              <li><iconify-icon icon="mdi:check-decagram-outline"></iconify-icon>
-                Profile complete: <strong id="complete">0%</strong>
-              </li>
+              <li><iconify-icon icon="mdi:map-marker-outline"></iconify-icon> Address: <span id="locLine">—</span></li>
+              <li><iconify-icon icon="mdi:briefcase-variant-outline"></iconify-icon> Works at: <span id="workLine">—</span></li>
+              <li><iconify-icon icon="mdi:school-outline"></iconify-icon> Studies: <span id="eduLine">—</span></li>
+              <li><iconify-icon icon="mdi:star-outline"></iconify-icon> Skills: <span id="skillsLine">—</span></li>
+              <li><iconify-icon icon="mdi:file-document-outline"></iconify-icon> <span id="resumeLine">Resume — Not generated</span></li>
+              <li><iconify-icon icon="mdi:check-decagram-outline"></iconify-icon> Profile complete: <strong id="complete">0%</strong></li>
             </ul>
           </div>
 
@@ -225,9 +193,6 @@ $nm = split_name($full_name);
             </button>
           </div>
         </section>
-
-        <!-- ====== rest of your original form & resume card (UNCHANGED) ====== -->
-
 
         <section class="grid">
           <form id="form" class="card form">
@@ -431,19 +396,83 @@ $nm = split_name($full_name);
       </main>
     </div>
 
-    <script>
-        // ---- minimal JS to trigger upload without UI change ----
-        const btnAvatar = document.getElementById('btnAvatar');
-      const avatarInput = document.getElementById('avatarInput');
+    
+       <script>
+        
+      /* ====== Avatar pick: open file dialog & auto-submit ====== */
+      const btnAvatar  = document.getElementById('btnAvatar');
+      const avatarIn   = document.getElementById('avatarInput');
       const avatarForm = document.getElementById('avatarForm');
+      const headerAvatar = document.querySelector('.top-actions .avatar');
+      const bigAvatar    = document.getElementById('phAvatar');
 
-      btnAvatar?.addEventListener('click', () => avatarInput?.click());
-      avatarInput?.addEventListener('change', () => {
-        if (avatarInput.files && avatarInput.files[0]) {
-          avatarForm.submit(); // post to server -> saves -> redirects
+      // Click button opens file dialog
+      btnAvatar?.addEventListener('click', () => avatarIn?.click());
+      
+      // File selected => auto-submit PHP form (this uses the server upload logic)
+      avatarIn?.addEventListener('change', () => {
+        if (avatarIn.files && avatarIn.files[0]) {
+          // This submits the form, which triggers the PHP upload logic and redirects
+          avatarForm.submit(); 
         }
       });
 
+      /* ====== Inject DB-backed defaults into your existing state ======
+         যদি তোমার আগের স্ক্রিপ্টে state = {...} থাকে,
+         সেটার ডিফল্টে নিচের দুটো ভ্যালু বসাও— */
+      window.__JOBGATE_DB_DEFAULTS__ = {
+        full_name: <?php echo json_encode($full_name); ?>,
+        avatar:    <?php echo json_encode($avatarSrc); ?>
+      };
+
+      /* ====== Minimal hook: যখন Save চাপবে, DB-তেও নাম আপডেট করবো ======
+         তোমার saveBtn onclick যেখানে আছে, তার সাথেই এটা কাজ করবে। */
+      (function hookSaveToDB(){
+        const saveBtn = document.getElementById('saveBtn');
+        const fName   = document.getElementById('fName');
+        const fullNameEl = document.getElementById('fullName');
+        if (!saveBtn || !fName) return;
+
+        saveBtn.addEventListener('click', async () => {
+          const newName = (fName.value || '').trim();
+          if (!newName) return;
+
+          try {
+            const resp = await fetch('profile.php', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+              body: new URLSearchParams({ action: 'save_name', full_name: newName })
+            });
+            const data = await resp.json();
+            if (data.ok) {
+              fullNameEl.textContent = data.full_name;
+              // Header title/anything else if needed
+            }
+          } catch(e) { /* ignore */ }
+        });
+      })();
+
+      /* ====== First render: override initial UI with DB values ====== */
+      (function applyDBDefaults(){
+        try {
+          const d = window.__JOBGATE_DB_DEFAULTS__;
+          if (!d) return;
+          // Top header avatar already set by PHP; also set large avatar/name immediately
+          if (d.avatar && bigAvatar) bigAvatar.src = d.avatar;
+          if (d.avatar && headerAvatar) headerAvatar.src = d.avatar;
+
+          // আপনার আগের স্ক্রিপ্টে state থাকলে, প্রথমবার সেটার name/avatar override করে দিন:
+          if (window.state) {
+            if (d.full_name) window.state.name = d.full_name;
+            if (d.avatar)    window.state.avatar = d.avatar;
+            if (window.renderAll) window.renderAll();
+          } else {
+            // no global state — কমপক্ষে শিরোনামটা আপডেট থাকুক
+            const fullNameEl = document.getElementById('fullName');
+            if (fullNameEl && d.full_name) fullNameEl.textContent = d.full_name;
+          }
+        } catch(e){}
+      })();
       // ====== State & storage ======
       const KEY = "jobgate_profile_v9";
       const load = () => JSON.parse(localStorage.getItem(KEY) || "null");
@@ -464,6 +493,19 @@ $nm = split_name($full_name);
         links: [],
         generated: false,
       };
+
+      // Apply DB values to Local Storage state if they exist and are newer/valid
+      (function syncDBToState(){
+          const d = window.__JOBGATE_DB_DEFAULTS__;
+          if (d.full_name && state.name === "Your Name") {
+              state.name = d.full_name;
+          }
+          if (d.avatar && d.avatar !== "./avatar_placeholder.jpg") {
+              // Only overwrite local storage if the DB has a real URL (not the placeholder)
+              state.avatar = d.avatar;
+          }
+      })();
+
 
       // ====== DOM refs ======
       const fullName = document.getElementById("fullName");
@@ -506,7 +548,7 @@ $nm = split_name($full_name);
       const btnReset = document.getElementById("clearBtn");
 
       const avatarInput = document.getElementById("avatarInput");
-      const btnAvatar = document.getElementById("btnAvatar");
+      // const btnAvatar = document.getElementById("btnAvatar"); // Already defined above
 
       // ====== Helpers ======
       const pct = (s) => {
@@ -719,6 +761,13 @@ $nm = split_name($full_name);
           links: [],
           generated: false,
         };
+        // Re-apply DB defaults to the reset state
+        (function reApplyDBDefaults(){
+            const d = window.__JOBGATE_DB_DEFAULTS__;
+            if (d.full_name) state.name = d.full_name;
+            if (d.avatar)    state.avatar = d.avatar;
+        })();
+        
         renderAll();
       };
 
@@ -800,21 +849,7 @@ $nm = split_name($full_name);
         }
       });
 
-      // Avatar: local file -> Base64
-      btnAvatar.onclick = () => avatarInput.click();
-      avatarInput.addEventListener("change", (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-        const reader = new FileReader();
-        reader.onload = (ev) => {
-          state.avatar = ev.target.result; // dataURL
-          state.generated = false;
-          syncFormDataToState(); // ADDED: Sync data before saving and rendering
-          save(state);
-          renderAll();
-        };
-        reader.readAsDataURL(file);
-      });
+      // NO local file -> Base64 conversion here, relying solely on PHP server upload.
 
       // ====== PDF Download (jsPDF) ======
       document.getElementById("btnDownload").onclick = () => {
@@ -943,18 +978,17 @@ $nm = split_name($full_name);
 
         // Optional avatar (if dataURL and not huge)
         try {
-          if (state.avatar && state.avatar.startsWith("data:image/")) {
-            // place small avatar top-right
-            const imgW = 64,
-              imgH = 64;
-            doc.addImage(
-              state.avatar,
-              "PNG",
-              595 - margin - imgW,
-              margin - 8,
-              imgW,
-              imgH
-            );
+          if (state.avatar && state.avatar.startsWith("http")) {
+            // NOTE: jsPDF addImage does not support external URLs by default.
+            // If you need the avatar in the PDF, it must be pre-loaded as Base64 or you must use a library extension.
+            // For now, only Base64 will work reliably in jsPDF, but we removed the Base64 conversion
+            // to fix the main issue. Leaving this block commented for compatibility.
+            
+            /*
+            // If you decide to pre-load/convert the image URL to Base64 on the fly (complex):
+            const imgW = 64, imgH = 64;
+            // doc.addImage(state.avatar, "PNG", 595 - margin - imgW, margin - 8, imgW, imgH); 
+            */
           }
         } catch (e) {
           /* ignore image errors */
