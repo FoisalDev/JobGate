@@ -199,7 +199,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ( $_POST['action'] ?? '' ) === 'sav
         exit;
 
     } catch (Throwable $e) {
-        if ($conn && $conn->errno) $conn->rollback();
+        if ($conn && $conn->errno) {
+            try {
+                $conn->rollback();
+            } catch (\Throwable $rb_e) { /* ignore rollback error */ }
+        }
         $message = "Profile Save Error: ".$e->getMessage();
         $message_type = 'error';
     }
@@ -219,16 +223,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ( $_POST['action'] ?? '' ) === 'del
         
         $conn->begin_transaction();
 
-        // Optional: Delete related entries (if FKs don't cascade)
-        // $stDelApp = $conn->prepare("DELETE FROM JobApplication WHERE job_id = ?");
-        // $stDelApp->bind_param("s", $job_id_to_delete);
-        // $stDelApp->execute(); $stDelApp->close();
-
-        // $stDelAssess = $conn->prepare("DELETE FROM JobAssessmentRequirements WHERE job_id = ?");
-        // $stDelAssess->bind_param("s", $job_id_to_delete);
-        // $stDelAssess->execute(); $stDelAssess->close();
-
-
         // Delete the job itself, ensuring the current user owns it
         $sqlDel = "DELETE FROM Jobs WHERE job_id = ? AND recruiter_id = ?";
         $stDel = $conn->prepare($sqlDel);
@@ -246,7 +240,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ( $_POST['action'] ?? '' ) === 'del
         exit;
 
     } catch (Throwable $e) {
-        if ($conn && $conn->errno) $conn->rollback();
+        if ($conn && $conn->errno) {
+            try {
+                $conn->rollback();
+            } catch (\Throwable $rb_e) { /* ignore rollback error */ }
+        }
         $message = "Deletion Error: ".$e->getMessage();
         $message_type = 'error';
     }
@@ -391,7 +389,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ( $_POST['action'] ?? '' ) === 'pos
     exit;
 
   } catch (Throwable $e) {
-    if ($conn && $conn->errno) $conn->rollback();
+    if ($conn && $conn->errno) {
+        try {
+            $conn->rollback();
+        } catch (\Throwable $rb_e) { /* ignore rollback error */ }
+    }
     $message = "Error: ".$e->getMessage();
     $message_type = 'error';
   }
@@ -459,7 +461,7 @@ try {
   <link rel="stylesheet" href="recruiter_profile.css" />
   <script src="https://code.iconify.design/iconify-icon/2.1.0/iconify-icon.min.js"></script>
   <style>
-    /* Base Styles */
+    /* Base Styles from the user's provided CSS */
     .topbar{ position: sticky; top:0; z-index: 2000; background:#ffffff; border-bottom:1px solid #e5e7eb; }
     .topbar-inner{ max-width: 1120px; margin:0 auto; padding:10px 16px; display:flex; align-items:center; justify-content:space-between; gap:16px; }
     .brand{ display:flex; align-items:center; text-decoration:none }
@@ -470,26 +472,61 @@ try {
     .user-name{ color:#334155; font-weight:600 }
     .avatar{ width:36px; height:36px; border-radius:9999px; display:block }
 
-    .layout{ max-width:1120px; margin:20px auto; padding:0 16px; display:flex; gap:18px; position: relative; z-index: 1; }
+    /* Layout & Sidebar structure definitions */
+    /* FIX: Changed layout from flex to grid to match profile.php structure */
+    .layout{ 
+        max-width:1120px; 
+        margin:20px auto; 
+        padding:0 16px; 
+        display:grid; /* Changed from flex */
+        grid-template-columns: 260px 1fr; /* Explicit grid definition */
+        gap:18px; 
+        position: relative; 
+        z-index: 1; 
+    }
     
-    /* MODIFIED: Sidebar to use flex column for bottom alignment */
+    /* MODIFIED: Sidebar to match previous dark structure, and be STICKY */
     .sidebar{ 
-      width:230px; background:#fff; border:1px solid #e5e7eb; border-radius:12px; padding:12px;
-      position: sticky; top:72px; z-index: 1; 
-      display: flex; flex-direction: column; /* Use flex column */
-      height: calc(100vh - 72px - 20px); /* Fill available vertical space */
+      width:100%; /* Takes 100% of its grid column */
+      background:#0b1d3a; /* Dark Blue from your previous structure */
+      color:#e2e8f0; /* Light text */
+      padding:12px 14px;
+      /* Core Fix: Use STICKY position within the grid */
+      position: sticky; 
+      top: 86px; /* Pin below the topbar (assuming 86px from profile.php) */
+      z-index: 10; 
+      display: flex; 
+      flex-direction: column; 
+      height: calc(100vh - 86px - 20px); /* Height calculation to fit viewport */
     }
 
-    .sbtn{ display:flex; align-items:center; gap:8px; padding:10px; border-radius:10px; color:#0f172a; text-decoration:none; border:0; background:#f8fafc; margin-bottom:8px }
-    .sbtn.active{ background:#e2e8f0 }
+    /* MODIFIED: SBTN styles to match dark sidebar structure */
+    .sbtn{ display:flex; align-items:center; gap:8px; padding:10px; border-radius:10px; 
+           color:#e2e8f0; /* Light text */
+           text-decoration:none; border:0; 
+           background:transparent; /* Transparent base */
+           margin-bottom:8px;
+           width: 100%;
+           font-weight: 800; /* Matching profile.php button style */
+           cursor: pointer;
+    }
+    .sbtn.active{ 
+        background:rgba(255, 255, 255, 0.1); /* Light background for active */
+        color:#ffffff;
+    }
+    .sbtn:hover{
+        background: rgba(255, 255, 255, 0.06);
+    }
     .sbtn.logout{ 
       background:#fee2e2; color:#991b1b; 
-      margin-top: auto; /* Push logout to the bottom */
-      margin-bottom: 0; /* Remove bottom margin */
+      margin-top: auto; 
+      margin-bottom: 0; 
     }
     .spacer {
-      flex-grow: 1; /* Pushes the logout button down */
+      flex-grow: 1; 
     }
+    /* END MODIFIED SBTN STYLES */
+
     
     .content{ flex:1 }
 
@@ -560,7 +597,6 @@ try {
     <aside class="sidebar">
       <a class="sbtn" href="home.php"><iconify-icon icon="mdi:view-dashboard"></iconify-icon>Dashboard</a>
       <a class="sbtn active" href="recruiter_profile.php"><iconify-icon icon="mdi:briefcase-edit-outline"></iconify-icon>Post Job</a>
-      <a class="sbtn" href="jobs.php"><iconify-icon icon="mdi:account-group-outline"></iconify-icon>View Applicants</a>
       <div class="spacer"></div>
       <a class="sbtn logout" href="logout.php"><iconify-icon icon="mdi:logout"></iconify-icon>Log out</a>
     </aside>
