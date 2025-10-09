@@ -1,5 +1,6 @@
 <?php
-// recruiter_profile.php — save per-job image if column exists (job_logo_url)
+// recruiter_profile.php — Rerouter for Recruiter's personal profile and job posting/history
+
 require_once 'db_connect.php';
 session_start();
 
@@ -32,6 +33,8 @@ $full_name = $_SESSION['full_name'] ?? 'Recruiter';
 
 $message = '';
 $message_type = '';
+$job_to_edit = null; // Holds job data if we are in edit mode
+$current_job_id = sanitize_input($_GET['job_id'] ?? ''); // Check for job ID in URL
 
 /* Utility: check if a column exists */
 function column_exists($conn, $table, $column) {
@@ -48,7 +51,7 @@ function column_exists($conn, $table, $column) {
   return !empty($row['c']);
 }
 
-/* Ensure necessary columns exist (Recruiters: company_name, company_address, Users: profile_photo_url) */
+/* Ensure necessary columns exist */
 try {
     if (!column_exists($conn, 'Users', 'profile_photo_url')) { $conn->query("ALTER TABLE Users ADD COLUMN profile_photo_url VARCHAR(255) NULL"); }
     if (!column_exists($conn, 'Recruiters', 'company_name')) { $conn->query("ALTER TABLE Recruiters ADD COLUMN company_name VARCHAR(255) NULL"); }
@@ -87,6 +90,42 @@ try {
   $message_type = 'error';
 }
 
+
+/* Load Job for Editing if job_id is present in URL */
+if ($recruiter_id && $current_job_id) {
+    try {
+        $sql = "SELECT * FROM Jobs WHERE job_id = ? AND recruiter_id = ?";
+        $stmt = $conn->prepare($sql);
+        $stmt->bind_param("ss", $current_job_id, $recruiter_id);
+        $stmt->execute();
+        $job_to_edit = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+
+        if (!$job_to_edit) {
+            $current_job_id = null;
+            $message = "Job not found or access denied.";
+            $message_type = 'error';
+        } else {
+            // Also load assessment ID if it exists
+            $sqlA = "SELECT assessment_id FROM JobAssessmentRequirements WHERE job_id = ?";
+            $stA = $conn->prepare($sqlA);
+            $stA->bind_param("s", $current_job_id);
+            $stA->execute();
+            $assessRow = $stA->get_result()->fetch_assoc();
+            $stA->close();
+            if ($assessRow) {
+                $job_to_edit['assessment_id'] = $assessRow['assessment_id'];
+            }
+        }
+    } catch (Throwable $e) {
+        $message = "Error loading job details: ".$e->getMessage();
+        $message_type = 'error';
+        $current_job_id = null;
+        $job_to_edit = null;
+    }
+}
+
+
 /* Handle Profile Save (User and Recruiter Data) */
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ( $_POST['action'] ?? '' ) === 'save_user_profile') {
     try {
@@ -105,7 +144,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ( $_POST['action'] ?? '' ) === 'sav
         
         /* 1) Handle Profile Photo Upload (to /uploads/profile_photos/) */
         if (!empty($_FILES['profile_photo']['name']) && $_FILES['profile_photo']['error'] === UPLOAD_ERR_OK) {
-            $dirFs  = __DIR__ . '/uploads/profile_photos/'; // Same directory as user profile photos
+            $dirFs  = __DIR__ . '/uploads/profile_photos/'; 
             $dirWeb = 'uploads/profile_photos/';
             if (!is_dir($dirFs)) mkdir($dirFs, 0777, true);
 
@@ -166,55 +205,56 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ( $_POST['action'] ?? '' ) === 'sav
     }
 }
 
-/* POST: Create job (strict to jobgate.sql, +optional job_logo_url) */
-// This section remains almost entirely untouched as per your request.
+
+/* POST: Create or Update job */
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ( $_POST['action'] ?? '' ) === 'post_job') {
   try {
     if (!$recruiter_id) throw new Exception("No recruiter profile found for this user.");
+    
+    $is_update = !empty($_POST['job_id']); // Check if we are updating an existing job
+    $current_job_id_post = sanitize_input($_POST['job_id'] ?? GUID());
 
-    /* 1) Handle image upload (one file used for both company logo and per-job logo) */
-    $job_logo_url = null; // <-- will save into Jobs.job_logo_url if that column exists
+    /* 1) Handle image upload (Company/Job Logo) */
+    $job_logo_url = null; // Default to null for insert/update
+    
+    // Check for existing company logo to use as default job logo
+    $stL = $conn->prepare("SELECT company_logo_url FROM Recruiters WHERE recruiter_id = ?");
+    $stL->bind_param("s", $recruiter_id);
+    $stL->execute();
+    $logoRow = $stL->get_result()->fetch_assoc();
+    $stL->close();
+    if ($logoRow && !empty($logoRow['company_logo_url'])) {
+        $job_logo_url = $logoRow['company_logo_url'];
+    }
+
+    // Check for a NEW logo uploaded with the job post/edit form
     if (!empty($_FILES['logo']['name']) && $_FILES['logo']['error'] === UPLOAD_ERR_OK) {
-      $dir_fs  = __DIR__ . '/uploads/job_logos/';
-      $dir_web = 'uploads/job_logos/';
-      if (!is_dir($dir_fs)) mkdir($dir_fs, 0777, true);
+        $dir_fs  = __DIR__ . '/uploads/job_logos/';
+        $dir_web = 'uploads/job_logos/';
+        if (!is_dir($dir_fs)) mkdir($dir_fs, 0777, true);
 
-      $info = @getimagesize($_FILES['logo']['tmp_name']);
-      if ($info === false) throw new Exception("Invalid image file.");
+        $info = @getimagesize($_FILES['logo']['tmp_name']);
+        if ($info === false) throw new Exception("Invalid image file.");
+        $ext = strtolower(pathinfo($_FILES['logo']['name'], PATHINFO_EXTENSION));
+        if (!in_array($ext, ['jpg','jpeg','png','gif','webp'], true)) throw new Exception("Only JPG, JPEG, PNG, GIF, WEBP allowed.");
+        if ($_FILES['logo']['size'] > 2*1024*1024) throw new Exception("File too large. Max 2MB.");
 
-      $ext = strtolower(pathinfo($_FILES['logo']['name'], PATHINFO_EXTENSION));
-      if (!in_array($ext, ['jpg','jpeg','png','gif','webp'], true)) throw new Exception("Only JPG, JPEG, PNG, GIF, WEBP allowed.");
-      if ($_FILES['logo']['size'] > 2*1024*1024) throw new Exception("File too large. Max 2MB.");
-
-      $fname = GUID().'.'.$ext;
-      if (!move_uploaded_file($_FILES['logo']['tmp_name'], $dir_fs.$fname)) {
-        throw new Exception("Failed to move uploaded file. Check folder permissions.");
-      }
-      $uploaded_url = $dir_web.$fname;
-
-      // Update company logo (so your brand shows elsewhere)
-      $stUp = $conn->prepare("UPDATE Recruiters SET company_logo_url = ? WHERE recruiter_id = ?");
-      $stUp->bind_param("ss", $uploaded_url, $recruiter_id);
-      $stUp->execute(); $stUp->close();
-      // $existing_logo = $uploaded_url; // No longer used, using $profile_photo_url for user
-
-      // Also remember for this specific job (if column exists)
-      $job_logo_url = $uploaded_url;
-    } else {
-        // If no new logo is uploaded for the job, default to the *Company Logo* if it exists
-        $stL = $conn->prepare("SELECT company_logo_url FROM Recruiters WHERE recruiter_id = ?");
-        $stL->bind_param("s", $recruiter_id);
-        $stL->execute();
-        $logoRow = $stL->get_result()->fetch_assoc();
-        $stL->close();
-        if ($logoRow && !empty($logoRow['company_logo_url'])) {
-            $job_logo_url = $logoRow['company_logo_url'];
+        $fname = GUID().'.'.$ext;
+        if (!move_uploaded_file($_FILES['logo']['tmp_name'], $dir_fs.$fname)) {
+            throw new Exception("Failed to move uploaded file. Check folder permissions.");
         }
+        $uploaded_url = $dir_web.$fname;
+        
+        // Update company logo in Recruiters table (only if necessary)
+        $stUp = $conn->prepare("UPDATE Recruiters SET company_logo_url = ? WHERE recruiter_id = ?");
+        $stUp->bind_param("ss", $uploaded_url, $recruiter_id);
+        $stUp->execute(); $stUp->close();
+        
+        $job_logo_url = $uploaded_url;
     }
 
 
     /* 2) Gather fields (schema exact) */
-    $job_id     = GUID();
     $title      = sanitize_input($_POST['title'] ?? '');
     $job_role   = sanitize_input($_POST['job_role'] ?? '');
     $sector_id  = sanitize_input($_POST['sector_id'] ?? '');
@@ -225,6 +265,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ( $_POST['action'] ?? '' ) === 'pos
     $description= sanitize_input($_POST['description'] ?? '');
     $requirements = sanitize_input($_POST['requirements'] ?? '');
     $application_deadline = sanitize_input($_POST['application_deadline'] ?? ($_POST['deadline'] ?? ''));
+    $assessment_id = sanitize_input($_POST['assessment_id'] ?? '');
 
     if ($title==='' || $sector_id==='' || $description==='' || $application_deadline==='') {
       throw new Exception("Please fill required fields (Title, Sector, Description, Application Deadline).");
@@ -236,41 +277,71 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ( $_POST['action'] ?? '' ) === 'pos
       throw new Exception("Salary max cannot be less than salary min.");
     }
 
-    /* 3) Build INSERT dynamically if job_logo_url exists */
+    /* 3) Build INSERT/UPDATE dynamically */
+    $conn->begin_transaction();
     $has_job_logo = column_exists($conn, 'Jobs', 'job_logo_url');
 
-    $conn->begin_transaction();
+    if ($is_update) {
+        // UPDATE Logic
+        $update_fields = [
+            'sector_id = ?', 'title = ?', 'job_role = ?', 'location = ?', 'type = ?',
+            'salary_min = ?', 'salary_max = ?', 'description = ?', 'requirements = ?', 'application_deadline = ?'
+        ];
+        $update_params = [$sector_id, $title, $job_role, $location, $type, $salary_min, $salary_max, $description, $requirements, $application_deadline];
+        $update_types = 'sssssiisss';
 
-    $fields = ['job_id','recruiter_id','sector_id','title','job_role','location','type','salary_min','salary_max','description','requirements','application_deadline'];
-    $place  = ['?','?','?','?','?','?','?','?','?','?','?','?'];
-    $types  = 'sssssssiisss'; // s(7) i i s s s  => total 12 types
-    $params = [$job_id,$recruiter_id,$sector_id,$title,$job_role,$location,$type,$salary_min,$salary_max,$description,$requirements,$application_deadline];
+        if ($has_job_logo) {
+            $update_fields[] = 'job_logo_url = ?';
+            $update_params[] = $job_logo_url;
+            $update_types .= 's';
+        }
 
-    if ($has_job_logo) {
-      $fields[] = 'job_logo_url';
-      $place[]  = '?';
-      $types   .= 's';
-      $params[] = $job_logo_url; // can be NULL if not uploaded this time
+        $sql = "UPDATE Jobs SET ".implode(', ', $update_fields)." WHERE job_id = ? AND recruiter_id = ?";
+        $update_params[] = $current_job_id_post;
+        $update_params[] = $recruiter_id;
+        $update_types .= 'ss';
+
+    } else {
+        // INSERT Logic
+        $fields = ['job_id','recruiter_id','sector_id','title','job_role','location','type','salary_min','salary_max','description','requirements','application_deadline'];
+        $place  = ['?','?','?','?','?','?','?','?','?','?','?','?'];
+        $types  = 'sssssssiisss'; 
+        $params = [$current_job_id_post, $recruiter_id, $sector_id, $title, $job_role, $location, $type, $salary_min, $salary_max, $description, $requirements, $application_deadline];
+
+        if ($has_job_logo) {
+            $fields[] = 'job_logo_url';
+            $place[]  = '?';
+            $types   .= 's';
+            $params[] = $job_logo_url;
+        }
+
+        $sql = "INSERT INTO Jobs (".implode(',', $fields).") VALUES (".implode(',', $place).")";
     }
 
-    $sql = "INSERT INTO Jobs (".implode(',', $fields).") VALUES (".implode(',', $place).")";
     $stmt = $conn->prepare($sql);
-    $stmt->bind_param($types, ...$params);
+    $stmt->bind_param($types, ...($is_update ? $update_params : $params));
     $stmt->execute();
     $stmt->close();
 
-    /* 4) Optional assessment mapping (JobAssessmentRequirements: job_id, assessment_id) */
-    $assessment_id = sanitize_input($_POST['assessment_id'] ?? '');
+    /* 4) Assessment mapping (Update or Insert) */
+    // Delete existing requirements first
+    $stDel = $conn->prepare("DELETE FROM JobAssessmentRequirements WHERE job_id = ?");
+    $stDel->bind_param("s", $current_job_id_post);
+    $stDel->execute(); $stDel->close();
+    
     if ($assessment_id !== '') {
       $st2 = $conn->prepare("INSERT INTO JobAssessmentRequirements (job_id, assessment_id) VALUES (?, ?)");
-      $st2->bind_param("ss", $job_id, $assessment_id);
+      $st2->bind_param("ss", $current_job_id_post, $assessment_id);
       $st2->execute(); $st2->close();
     }
 
     $conn->commit();
-    $message = "Job posted successfully!";
+    $message = $is_update ? "Job updated successfully!" : "Job posted successfully!";
     $message_type = 'success';
-    $_POST = [];
+    
+    // Redirect to the same page without job_id or just clear POST
+    header("Location: recruiter_profile.php?msg=" . ($is_update ? "updated" : "posted"));
+    exit;
 
   } catch (Throwable $e) {
     if ($conn && $conn->errno) $conn->rollback();
@@ -280,9 +351,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ( $_POST['action'] ?? '' ) === 'pos
 }
 
 // Check for success message after redirect
-if (isset($_GET['msg']) && $_GET['msg'] === 'saved') {
-    $message = "Profile details saved successfully!";
-    $message_type = 'success';
+if (isset($_GET['msg'])) {
+    if ($_GET['msg'] === 'saved') {
+        $message = "Profile details saved successfully!";
+        $message_type = 'success';
+    } elseif ($_GET['msg'] === 'posted') {
+        $message = "Job posted successfully!";
+        $message_type = 'success';
+    } elseif ($_GET['msg'] === 'updated') {
+        $message = "Job updated successfully!";
+        $message_type = 'success';
+    }
 }
 
 
@@ -342,11 +421,26 @@ try {
     .avatar{ width:36px; height:36px; border-radius:9999px; display:block }
 
     .layout{ max-width:1120px; margin:20px auto; padding:0 16px; display:flex; gap:18px; position: relative; z-index: 1; }
-    .sidebar{ width:230px; background:#fff; border:1px solid #e5e7eb; border-radius:12px; padding:12px;
-      position: sticky; top:72px; z-index: 1; }
+    
+    /* MODIFIED: Sidebar to use flex column for bottom alignment */
+    .sidebar{ 
+      width:230px; background:#fff; border:1px solid #e5e7eb; border-radius:12px; padding:12px;
+      position: sticky; top:72px; z-index: 1; 
+      display: flex; flex-direction: column; /* Use flex column */
+      height: calc(100vh - 72px - 20px); /* Fill available vertical space */
+    }
+
     .sbtn{ display:flex; align-items:center; gap:8px; padding:10px; border-radius:10px; color:#0f172a; text-decoration:none; border:0; background:#f8fafc; margin-bottom:8px }
     .sbtn.active{ background:#e2e8f0 }
-    .sbtn.logout{ background:#fee2e2; color:#991b1b }
+    .sbtn.logout{ 
+      background:#fee2e2; color:#991b1b; 
+      margin-top: auto; /* Push logout to the bottom */
+      margin-bottom: 0; /* Remove bottom margin */
+    }
+    .spacer {
+      flex-grow: 1; /* Pushes the logout button down */
+    }
+    
     .content{ flex:1 }
 
     .job-post-card,.history-card{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:18px;margin-bottom:16px}
@@ -356,7 +450,14 @@ try {
     .form-group input,.form-group select,.form-group textarea{padding:10px;border:1px solid #cbd5e1;border-radius:8px}
     .btn-primary{display:inline-flex;align-items:center;gap:6px;background:#2563eb;color:#fff;border:0;padding:10px 14px;border-radius:10px;cursor:pointer}
     .btn-ghost{display:inline-flex;align-items:center;gap:6px;border:1px solid #cbd5e1;padding:8px 10px;border-radius:10px;text-decoration:none;color:#0f172a}
-    .job-history-list{display:flex;flex-direction:column;gap:12px}
+    
+    /* MODIFIED: Job History List to be scrollable */
+    .job-history-list{
+      display:flex;flex-direction:column;gap:12px;
+      max-height: 400px; /* Set a maximum height */
+      overflow-y: auto; /* Enable vertical scrolling */
+      padding-right: 10px; /* Space for the scrollbar */
+    }
     .history-item{display:flex;align-items:center;justify-content:space-between;border:1px solid #e5e7eb;border-radius:10px;padding:12px}
     .job-title{font-weight:700}
     .text-muted{color:#64748b}
@@ -390,7 +491,7 @@ try {
     .form-grid.profile-grid{ grid-template-columns: repeat(2, minmax(0, 1fr)); }
   </style>
 </head>
-<body>
+<body <?php echo $job_to_edit ? 'onload="scrollToJobPost()"' : ''; ?>>
   <header class="topbar">
     <div class="topbar-inner">
       <a href="home.php" class="brand">
@@ -481,26 +582,44 @@ try {
         </form>
       </section>
 
-      <section class="job-post-card">
-        <h3 class="card-title">Post a New Job Opening</h3>
+      <section id="job-post-section" class="job-post-card">
+        <h3 class="card-title"><?php echo $job_to_edit ? 'Edit Job: ' . htmlspecialchars($job_to_edit['title']) : 'Post a New Job Opening'; ?></h3>
+        
         <form method="POST" action="recruiter_profile.php" enctype="multipart/form-data">
           <input type="hidden" name="action" value="post_job" />
+          
+          <?php if ($job_to_edit): ?>
+            <input type="hidden" name="job_id" value="<?php echo htmlspecialchars($job_to_edit['job_id']); ?>" />
+            <?php 
+                // Set form data to job being edited
+                $formData = $job_to_edit;
+            ?>
+          <?php else: ?>
+            <?php 
+                // Use posted data or empty defaults for new job
+                $formData = $_POST;
+            ?>
+          <?php endif; ?>
 
           <div class="form-grid">
             <div class="form-group">
               <label for="title">Job Title *</label>
-              <input type="text" id="title" name="title" required value="<?php echo isset($_POST['title'])?htmlspecialchars($_POST['title']):''; ?>">
+              <input type="text" id="title" name="title" required value="<?php echo htmlspecialchars($formData['title'] ?? ''); ?>">
             </div>
 
             <div class="form-group">
               <label for="job_role">Specific Role/Title</label>
-              <input type="text" id="job_role" name="job_role" value="<?php echo isset($_POST['job_role'])?htmlspecialchars($_POST['job_role']):''; ?>">
+              <input type="text" id="job_role" name="job_role" value="<?php echo htmlspecialchars($formData['job_role'] ?? ''); ?>">
             </div>
 
             <div class="form-group">
               <label for="logo">Company/Job Image (Max 2MB)</label>
               <input type="file" id="logo" name="logo" accept="image/*">
-              <small class="text-muted">Saved to company logo; if <code>Jobs.job_logo_url</code> exists, also saved per job.</small>
+              <?php if ($job_to_edit && !empty($job_to_edit['job_logo_url'])): ?>
+                <small class="text-muted">Current Logo: <a href="<?php echo htmlspecialchars($job_to_edit['job_logo_url']); ?>" target="_blank">View</a> | Upload new to replace.</small>
+              <?php else: ?>
+                <small class="text-muted">Upload logo for this job (optional).</small>
+              <?php endif; ?>
             </div>
 
             <div class="form-group">
@@ -509,7 +628,7 @@ try {
                 <option value="">Select Sector</option>
                 <?php foreach ($sectors as $sector): ?>
                   <option value="<?php echo htmlspecialchars($sector['sector_id']); ?>"
-                    <?php echo (isset($_POST['sector_id']) && $_POST['sector_id']===$sector['sector_id'])?'selected':''; ?>>
+                    <?php echo (isset($formData['sector_id']) && $formData['sector_id']===$sector['sector_id'])?'selected':''; ?>>
                     <?php echo htmlspecialchars($sector['name']); ?>
                   </option>
                 <?php endforeach; ?>
@@ -518,14 +637,14 @@ try {
 
             <div class="form-group">
               <label for="location">Location</label>
-              <input type="text" id="location" name="location" value="<?php echo isset($_POST['location'])?htmlspecialchars($_POST['location']):''; ?>">
+              <input type="text" id="location" name="location" value="<?php echo htmlspecialchars($formData['location'] ?? ''); ?>">
             </div>
 
             <div class="form-group">
               <label for="type">Employment Type *</label>
               <select id="type" name="type" required>
                 <?php
-                  $t = isset($_POST['type'])?$_POST['type']:'Full-time';
+                  $t = htmlspecialchars($formData['type'] ?? 'Full-time');
                   foreach (['Full-time','Part-time','Contract','Internship'] as $opt) {
                     $sel = ($t===$opt)?'selected':'';
                     echo '<option value="'.htmlspecialchars($opt).'" '.$sel.'>'.htmlspecialchars($opt).'</option>';
@@ -536,18 +655,18 @@ try {
 
             <div class="form-group">
               <label for="salary_min">Salary Min</label>
-              <input type="number" id="salary_min" name="salary_min" min="0" step="100" value="<?php echo isset($_POST['salary_min'])?htmlspecialchars($_POST['salary_min']):'0'; ?>">
+              <input type="number" id="salary_min" name="salary_min" min="0" step="100" value="<?php echo htmlspecialchars($formData['salary_min'] ?? '0'); ?>">
             </div>
 
             <div class="form-group">
               <label for="salary_max">Salary Max</label>
-              <input type="number" id="salary_max" name="salary_max" min="0" step="100" value="<?php echo isset($_POST['salary_max'])?htmlspecialchars($_POST['salary_max']):'0'; ?>">
+              <input type="number" id="salary_max" name="salary_max" min="0" step="100" value="<?php echo htmlspecialchars($formData['salary_max'] ?? '0'); ?>">
             </div>
 
             <div class="form-group">
               <label for="application_deadline">Application Deadline *</label>
               <input type="date" id="application_deadline" name="application_deadline" required
-                     value="<?php echo isset($_POST['application_deadline'])?htmlspecialchars($_POST['application_deadline']):(isset($_POST['deadline'])?htmlspecialchars($_POST['deadline']):''); ?>">
+                     value="<?php echo htmlspecialchars($formData['application_deadline'] ?? ''); ?>">
             </div>
 
             <div class="form-group form-full">
@@ -556,7 +675,13 @@ try {
                 <option value="">No Mandatory Assessment</option>
                 <?php foreach ($assessments as $assessment): ?>
                   <option value="<?php echo htmlspecialchars($assessment['assessment_id']); ?>"
-                    <?php echo (isset($_POST['assessment_id']) && $_POST['assessment_id']===$assessment['assessment_id'])?'selected':''; ?>>
+                    <?php 
+                      $current_assessment = $formData['assessment_id'] ?? '';
+                      if($job_to_edit && !empty($job_to_edit['assessment_id'])) {
+                          $current_assessment = $job_to_edit['assessment_id'];
+                      }
+                      echo ($current_assessment===$assessment['assessment_id'])?'selected':''; 
+                    ?>>
                     <?php echo htmlspecialchars($assessment['title']); ?>
                   </option>
                 <?php endforeach; ?>
@@ -566,17 +691,25 @@ try {
 
             <div class="form-group form-full">
               <label for="description">Job Description *</label>
-              <textarea id="description" name="description" rows="5" required><?php echo isset($_POST['description'])?htmlspecialchars($_POST['description']):''; ?></textarea>
+              <textarea id="description" name="description" rows="5" required><?php echo htmlspecialchars($formData['description'] ?? ''); ?></textarea>
             </div>
 
             <div class="form-group form-full">
               <label for="requirements">Key Requirements / Skills</label>
-              <textarea id="requirements" name="requirements" rows="3"><?php echo isset($_POST['requirements'])?htmlspecialchars($_POST['requirements']):''; ?></textarea>
+              <textarea id="requirements" name="requirements" rows="3"><?php echo htmlspecialchars($formData['requirements'] ?? ''); ?></textarea>
             </div>
           </div>
 
           <div class="form-actions" style="margin-top:10px">
-            <button type="submit" class="btn-primary"><iconify-icon icon="mdi:send"></iconify-icon> Publish Job</button>
+            <button type="submit" class="btn-primary">
+                <iconify-icon icon="<?php echo $job_to_edit ? 'mdi:content-save-outline' : 'mdi:send'; ?>"></iconify-icon> 
+                <?php echo $job_to_edit ? 'Update Job' : 'Publish Job'; ?>
+            </button>
+            <?php if ($job_to_edit): ?>
+              <a href="recruiter_profile.php" class="btn-ghost" style="text-decoration: none;">
+                <iconify-icon icon="mdi:cancel"></iconify-icon> Cancel Edit
+              </a>
+            <?php endif; ?>
           </div>
         </form>
       </section>
@@ -610,7 +743,11 @@ try {
                     <?php endif; ?>
                   </div>
                 </div>
-                <a href="job_details.php?jobId=<?php echo htmlspecialchars($job['job_id']); ?>" class="btn-ghost">View</a>
+                <a href="recruiter_profile.php?job_id=<?php echo htmlspecialchars($job['job_id']); ?>" 
+                   class="btn-primary" 
+                   style="padding: 10px 14px; text-decoration: none; background: #f97316;">
+                  <iconify-icon icon="mdi:pencil"></iconify-icon> Edit Job
+                </a>
               </div>
             <?php endforeach; ?>
           </div>
@@ -623,6 +760,7 @@ try {
     // ** Photo Upload/Preview Functionality for User Profile Photo **
     const btnPhotoUpload = document.getElementById('btnPhotoUpload');
     const photoInput = document.getElementById('photoInput');
+    const profilePhoto = document.getElementById('profilePhoto');
 
     // 1. Open file dialog on button click
     btnPhotoUpload?.addEventListener('click', () => photoInput?.click());
@@ -633,12 +771,24 @@ try {
         if (file) {
             const reader = new FileReader();
             reader.onload = (event) => {
-                document.getElementById('profilePhoto').src = event.target.result;
+                profilePhoto.src = event.target.result;
             };
             reader.readAsDataURL(file);
         }
     });
-
+    
+    // ** Scrollable Editing Section Implimentation **
+    function scrollToJobPost() {
+      const jobPostSection = document.getElementById('job-post-section');
+      if (jobPostSection) {
+        jobPostSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }
+    
+    // Call scroll function if job_id is present in the URL on page load
+    <?php if ($job_to_edit): ?>
+        scrollToJobPost();
+    <?php endif; ?>
   </script>
 </body>
 </html>
