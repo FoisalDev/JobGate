@@ -1,3 +1,115 @@
+<?php
+// profile.php — server-backed avatar + name (no design change)
+session_start();
+require_once 'db_connect.php';
+
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
+mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
+
+if (!is_logged_in()) { redirect('login.php'); exit; }
+
+$user_id   = $_SESSION['user_id'];
+$user_type = $_SESSION['user_type'] ?? 'applicant';
+$full_name = $_SESSION['full_name'] ?? 'Your Name';
+
+// ---- Ensure Users.profile_photo_url column exists (adds once if missing) ----
+try {
+  $chk = $conn->prepare("SELECT COUNT(*) c FROM INFORMATION_SCHEMA.COLUMNS
+                         WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME='Users' AND COLUMN_NAME='profile_photo_url'");
+  $chk->execute();
+  $c = $chk->get_result()->fetch_assoc();
+  $chk->close();
+  if (empty($c['c'])) {
+    $conn->query("ALTER TABLE Users ADD COLUMN profile_photo_url VARCHAR(255) NULL");
+  }
+} catch (Throwable $e) {
+  // ignore schema add errors (shared hosting etc.)
+}
+
+// ---- Handle avatar upload ----
+$profile_photo_url = null;
+$msg = '';
+try {
+  // Load current value
+  $stmt = $conn->prepare("SELECT profile_photo_url, full_name FROM Users WHERE user_id = ? LIMIT 1");
+  $stmt->bind_param("s", $user_id);
+  $stmt->execute();
+  $info = $stmt->get_result()->fetch_assoc();
+  $stmt->close();
+
+  if ($info) {
+    $profile_photo_url = $info['profile_photo_url'] ?: null;
+    // refresh full_name in session (if changed elsewhere)
+    if (!empty($info['full_name'])) {
+      $full_name = $info['full_name'];
+      $_SESSION['full_name'] = $full_name;
+    }
+  }
+
+  if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'upload_avatar') {
+    if (!empty($_FILES['avatar_file']['name']) && $_FILES['avatar_file']['error'] === UPLOAD_ERR_OK) {
+      $dirFs  = __DIR__ . '/uploads/profile_photos/';
+      $dirWeb = 'uploads/profile_photos/';
+      if (!is_dir($dirFs)) { mkdir($dirFs, 0777, true); }
+
+      $info = @getimagesize($_FILES['avatar_file']['tmp_name']);
+      if ($info === false) { throw new Exception("Invalid image file."); }
+
+      $ext = strtolower(pathinfo($_FILES['avatar_file']['name'], PATHINFO_EXTENSION));
+      if (!in_array($ext, ['jpg','jpeg','png','gif','webp'])) {
+        throw new Exception("Only JPG, JPEG, PNG, GIF, WEBP allowed.");
+      }
+      if ($_FILES['avatar_file']['size'] > 2*1024*1024) {
+        throw new Exception("File too large (max 2MB).");
+      }
+
+      // unique filename
+      $name = bin2hex(random_bytes(8)).'.'.$ext;
+      if (!move_uploaded_file($_FILES['avatar_file']['tmp_name'], $dirFs.$name)) {
+        throw new Exception("Failed to save file. Check folder permissions.");
+      }
+
+      $newUrl = $dirWeb.$name;
+
+      // Update DB
+      $up = $conn->prepare("UPDATE Users SET profile_photo_url = ? WHERE user_id = ?");
+      $up->bind_param("ss", $newUrl, $user_id);
+      $up->execute(); $up->close();
+
+      // Reflect immediately
+      $profile_photo_url = $newUrl;
+      $msg = 'Profile photo updated.';
+    } else {
+      throw new Exception("Please select a valid image.");
+    }
+
+    // Hard redirect to avoid resubmission + to refresh <img>
+    header("Location: profile.php");
+    exit;
+  }
+} catch (Throwable $e) {
+  $msg = $e->getMessage();
+}
+
+// Decide header profile link
+$profilePage = ($user_type === 'recruiter') ? 'recruiter_profile.php' : 'profile.php';
+
+// Avatar fallback
+$avatarSrc = $profile_photo_url ?: './avatar_placeholder.jpg';
+
+// Split name (first + last) just for header display if needed later
+function split_name($full) {
+  $full = trim($full);
+  if ($full === '') return ['first'=>'Your', 'last'=>'Name'];
+  $parts = preg_split('/\s+/', $full);
+  $first = array_shift($parts);
+  $last = count($parts) ? implode(' ', $parts) : '';
+  return ['first'=>$first, 'last'=>$last];
+}
+$nm = split_name($full_name);
+?>
 <!DOCTYPE html>
 <html lang="bn">
   <head>
@@ -6,9 +118,7 @@
     <title>JobGate — Profile</title>
 
     <link rel="stylesheet" href="profile.css" />
-
     <script src="https://code.iconify.design/iconify-icon/2.1.0/iconify-icon.min.js"></script>
-
     <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
   </head>
   <body>
@@ -16,113 +126,88 @@
       <div class="topbar-inner">
         <img src="./JobGate_logo.png" alt="JobGate" class="logo" />
         <div class="search-wrap" role="search">
-          <iconify-icon
-            icon="mdi:magnify"
-            class="sicon"
-            aria-hidden="true"
-          ></iconify-icon>
-          <input
-            type="text"
-            placeholder="Search JobGate"
-            aria-label="Search JobGate"
-          />
+          <iconify-icon icon="mdi:magnify" class="sicon" aria-hidden="true"></iconify-icon>
+          <input type="text" placeholder="Search JobGate" aria-label="Search JobGate" />
         </div>
         <nav class="top-actions" aria-label="Top actions">
-          <a href="home.html" class="tlink">Home</a>
-          <a href="profile.html" class="tlink">Profile</a>
-          <img
-            src="./avatar_placeholder.jpg"
-            class="avatar"
-            alt="User avatar"
-          />
+          <a href="home.php" class="tlink">Home</a>
+          <a href="<?php echo htmlspecialchars($profilePage); ?>" class="tlink">Profile</a>
+          <!-- Header avatar from DB -->
+          <img src="<?php echo htmlspecialchars($avatarSrc); ?>" class="avatar" alt="User avatar" />
         </nav>
       </div>
     </header>
 
     <div class="layout">
       <aside class="sidebar">
-        <button class="sbtn" onclick="window.location.href='home.html'">
+        <button class="sbtn" onclick="window.location.href='home.php'">
           <iconify-icon icon="mdi:home" class="sib"></iconify-icon>Feed
         </button>
-        <button class="sbtn" onclick="window.location.href='career_tips.html'">
-          <iconify-icon
-            icon="mdi:lightbulb-on-outline"
-            class="sib"
-          ></iconify-icon
-          >Career Tips
+        <button class="sbtn" onclick="window.location.href='career_tips.php'">
+          <iconify-icon icon="mdi:lightbulb-on-outline" class="sib"></iconify-icon>Career Tips
         </button>
-        <button class="sbtn" onclick="window.location.href='job_events.html'">
-          <iconify-icon icon="mdi:calendar-star" class="sib"></iconify-icon>Job
-          Events
+        <button class="sbtn" onclick="window.location.href='job_events.php'">
+          <iconify-icon icon="mdi:calendar-star" class="sib"></iconify-icon>Job Events
         </button>
-        <button class="sbtn" onclick="window.location.href='courses.html'">
-          <iconify-icon icon="mdi:book-open-variant" class="sib"></iconify-icon
-          >Courses
+        <button class="sbtn" onclick="window.location.href='courses.php'">
+          <iconify-icon icon="mdi:book-open-variant" class="sib"></iconify-icon>Courses
         </button>
-        <button
-          class="sbtn"
-          onclick="window.location.href='skill_assessment.html'"
-        >
-          <iconify-icon
-            icon="mdi:account-check-outline"
-            class="sib"
-          ></iconify-icon
-          >Skill Assessment
+        <button class="sbtn" onclick="window.location.href='skill_assessment.php'">
+          <iconify-icon icon="mdi:account-check-outline" class="sib"></iconify-icon>Skill Assessment
         </button>
-        <button class="sbtn" onclick="window.location.href='jobs.html'">
-          <iconify-icon icon="mdi:briefcase-outline" class="sib"></iconify-icon
-          >Jobs
+        <button class="sbtn" onclick="window.location.href='jobs.php'">
+          <iconify-icon icon="mdi:briefcase-outline" class="sib"></iconify-icon>Jobs
         </button>
         <div class="spacer"></div>
-        <button class="sbtn logout" onclick="window.location.href='login.html'">
+        <button class="sbtn logout" onclick="window.location.href='logout.php'">
           <iconify-icon icon="mdi:logout" class="sib"></iconify-icon>Log out
         </button>
       </aside>
 
       <main class="content">
+        <?php if (!empty($msg)): ?>
+          <div style="background:#eff6ff;border:1px solid #bfdbfe;color:#1e3a8a;padding:10px 12px;border-radius:10px;margin-bottom:10px;">
+            <?php echo htmlspecialchars($msg); ?>
+          </div>
+        <?php endif; ?>
+
         <section class="profile-head">
           <div class="ph-left">
             <div class="avatar-lg">
-              <img id="phAvatar" src="./avatar_placeholder.jpg" alt="avatar" />
-              <button
-                class="cam"
-                id="btnAvatar"
-                title="Upload photo from device"
-              >
+              <!-- Big profile avatar from DB -->
+              <img id="phAvatar" src="<?php echo htmlspecialchars($avatarSrc); ?>" alt="avatar" />
+              <button class="cam" id="btnAvatar" title="Upload photo from device">
                 <iconify-icon icon="mdi:camera"></iconify-icon>
               </button>
-              <input type="file" id="avatarInput" accept="image/*" hidden />
+              <!-- Hidden form for avatar upload (no design change) -->
+              <form id="avatarForm" method="POST" action="profile.php" enctype="multipart/form-data">
+                <input type="hidden" name="action" value="upload_avatar">
+                <input type="file" name="avatar_file" id="avatarInput" accept="image/*" hidden />
+              </form>
             </div>
             <figcaption id="quote">“Life is a full of journey”</figcaption>
           </div>
 
           <div class="ph-mid">
-            <h1 id="fullName">Your Name</h1>
+            <!-- Auto name from DB -->
+            <h1 id="fullName"><?php echo htmlspecialchars($full_name); ?></h1>
             <ul class="facts">
-              <li>
-                <iconify-icon icon="mdi:map-marker-outline"></iconify-icon>
+              <li><iconify-icon icon="mdi:map-marker-outline"></iconify-icon>
                 Address: <span id="locLine">—</span>
               </li>
-              <li>
-                <iconify-icon
-                  icon="mdi:briefcase-variant-outline"
-                ></iconify-icon>
+              <li><iconify-icon icon="mdi:briefcase-variant-outline"></iconify-icon>
                 Works at: <span id="workLine">—</span>
               </li>
-              <li>
-                <iconify-icon icon="mdi:school-outline"></iconify-icon> Studies:
-                <span id="eduLine">—</span>
+              <li><iconify-icon icon="mdi:school-outline"></iconify-icon>
+                Studies: <span id="eduLine">—</span>
               </li>
-              <li>
-                <iconify-icon icon="mdi:star-outline"></iconify-icon> Skills:
-                <span id="skillsLine">—</span>
+              <li><iconify-icon icon="mdi:star-outline"></iconify-icon>
+                Skills: <span id="skillsLine">—</span>
               </li>
-              <li>
-                <iconify-icon icon="mdi:file-document-outline"></iconify-icon>
+              <li><iconify-icon icon="mdi:file-document-outline"></iconify-icon>
                 <span id="resumeLine">Resume — Not generated</span>
               </li>
-              <li>
-                <iconify-icon icon="mdi:check-decagram-outline"></iconify-icon>
+              <li><iconify-icon icon="mdi:check-decagram-outline"></iconify-icon>
                 Profile complete: <strong id="complete">0%</strong>
               </li>
             </ul>
@@ -133,14 +218,16 @@
               <iconify-icon icon="mdi:pencil"></iconify-icon> Edit
             </button>
             <button id="btnGenerate" class="btn-primary">
-              <iconify-icon icon="mdi:magic-staff"></iconify-icon> Generate
-              Resume
+              <iconify-icon icon="mdi:magic-staff"></iconify-icon> Generate Resume
             </button>
             <button id="btnDownload" class="btn-success" disabled>
               <iconify-icon icon="mdi:download"></iconify-icon> Download PDF
             </button>
           </div>
         </section>
+
+        <!-- ====== rest of your original form & resume card (UNCHANGED) ====== -->
+
 
         <section class="grid">
           <form id="form" class="card form">
