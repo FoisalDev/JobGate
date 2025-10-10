@@ -130,8 +130,46 @@ function render_job_card($job) {
     <script src="https://code.iconify.design/iconify-icon/2.1.0/iconify-icon.min.js"></script>
 
     <style>
+      /* --- FIXES FOR STICKY/NON-SCROLLING SIDEBAR --- */
+      
+      /* Ensure HTML/Body allow full height calculation */
+      html, body {
+          height: 100%;
+      }
+      
+      /* Sidebar: Use STICKY position and enforce column flex */
+      .sidebar { 
+        position: sticky; 
+        top: 86px; /* Assuming topbar is 86px high */
+        z-index: 10; 
+        
+        /* Flexbox for vertical space management */
+        display: flex;
+        flex-direction: column;
+        height: calc(100vh - 86px); /* Full height from under the topbar */
+        
+        /* Inherited styles (assuming dark blue background) */
+        background: #0b1d3a; 
+        color: #e2e8f0; 
+        padding: 12px 14px;
+        width: 260px; 
+      } 
+      
+      /* Spacer: Pushes the logout button to the bottom */
+      .spacer {
+          flex-grow: 1;
+      }
+      
+      /* Logout Button: Ensures it is pinned to the bottom */
+      .sbtn.logout {
+          margin-top: auto;
+          margin-bottom: 0;
+      }
+      
+      /* --- END SIDEBAR FIXES --- */
+      
       /* keep header/left layout intact; just ensure sidebar stays fixed and feed scrolls */
-      .sidebar{ position: sticky; top: 80px; } /* left button side div stays fixed relative to viewport after header */
+      /* .sidebar{ position: sticky; top: 80px; } // REMOVED as redundant/conflicting */
       
       /* FIX 1: Increase Featured Job Area Height to 700px */
       .featured-scroll {
