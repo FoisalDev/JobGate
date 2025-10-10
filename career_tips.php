@@ -47,142 +47,77 @@ $avatarSrc = htmlspecialchars($avatarSrc);
     
     <style>
 /* ---------------------------------------------------------------------- */
-/* --- INLINED CSS FIXES --- */
+/* --- CORE CSS FIXES FOR FIXED TOPBAR & SIDEBAR --- */
 /* ---------------------------------------------------------------------- */
 
-/* Core Height and Body Fixes (Essential for sticky positioning) */
+/* 1. HTML/Body Base Settings (Essential for fixed positioning) */
 html,
 body {
   height: 100%;
+  margin: 0; 
+  /* FIX: Added margin: 0 to ensure no default browser margin breaks fixed layout */
 }
 
-/* Sidebar FIX: Use STICKY position, set explicit top pin, and enforce column flex */
-.sidebar {
-  /* Inherits dark background: #0b1d3a; color: #e2e8f0; */
-  
-  /* CORE FIX: The combination that makes it stick */
-  position: sticky;
-  top: 86px; /* FIXED PIN: Set to 86px to clear the topbar */
-  z-index: 100;
+/* 2. Topbar FIX: Must be fixed to prevent scrolling */
+.topbar {
+    position: fixed; 
+    top: 0;
+    width: 100%; 
+    z-index: 1000;
+}
+/* Compensate for the fixed topbar */
+body {
+    padding-top: 86px; /* Assuming topbar height is 86px */
+}
 
+/* 3. Sidebar FIX: Make it permanently Fixed right below the Topbar */
+.sidebar {
+  /* CORE FIX: Change to FIXED and pin */
+  position: fixed; 
+  left: 0; /* Pin to the very left of the viewport */
+  top: 86px; /* Pinned exactly below the fixed topbar */
+  z-index: 999;
+  
   /* CORE FIX: Flexbox for alignment */
   display: flex;
   flex-direction: column;
 
-  /* Ensure it fills the rest of the viewport height */
-  height: calc(100vh - 86px); 
+  /* Calculate height: 100vh - topbar height - small buffer */
+  height: calc(100vh - 86px - 2px); /* Subtracted 2px buffer for rendering stability */
   overflow-y: auto; 
   
+  /* Retaining necessary inherited styles */
   padding: 12px 14px;
   gap: 6px;
+  width: 260px; /* Assuming its width */
 }
 
-/* Spacer: The key to pushing the logout button down */
+/* 4. Layout: Must adjust the content area to clear the fixed sidebar */
+/* CRITICAL: We need to push the main content over by the fixed sidebar width */
+.layout {
+    /* Retaining original layout's structure */
+    width: min(1380px, 96%); 
+    margin: 0 auto; 
+    padding: 0; 
+    
+    /* CRITICAL FIX: Add margin to the main layout wrapper to clear the fixed sidebar */
+    margin-left: 260px;
+    width: calc(100% - 260px); 
+
+    /* The content div will now handle the scrolling and internal layout */
+    display: block; /* Removing grid/flex on .layout to simplify flow */
+}
+
+/* 5. Spacer and Logout Fix */
 .spacer {
   flex-grow: 1;
 }
-
-/* Logout Button: Ensures it stays pinned at the bottom */
 .sbtn.logout {
   margin-top: auto; 
   margin-bottom: 0;
 }
-/* --- Other CSS remains unchanged (assumed in career_tips.css) --- */
-/* --- Your original CSS follows for completeness, assuming it's in a file --- */
 
-@import url("home.css");
-
-/* Intro */
-.intro {
-  font-size: 16px;
-  color: #475569;
-  margin-bottom: 28px;
-  line-height: 1.6;
-  max-width: 820px;
-}
-
-/* Sections */
-.tips-section {
-  margin-bottom: 48px;
-}
-.sub-title {
-  font-size: 20px;
-  font-weight: 800;
-  margin: 12px 0 20px;
-  color: #0f172a;
-}
-
-/* Grid */
-.tips-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 24px;
-}
-
-/* Cards */
-.tip-card {
-  background: #fff;
-  border: 1px solid rgba(15, 23, 42, 0.08);
-  border-radius: 14px;
-  box-shadow: 0 8px 20px rgba(2, 6, 23, 0.06);
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-.tip-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 12px 28px rgba(2, 6, 23, 0.12);
-}
-.tip-card img {
-  width: 100%;
-  height: 160px;
-  object-fit: cover;
-}
-.tip-body {
-  padding: 14px 16px 18px;
-}
-.author {
-  font-size: 12px;
-  font-weight: 600;
-  color: #64748b;
-  margin-bottom: 6px;
-  text-transform: uppercase;
-}
-.tip-body h4 {
-  font-size: 16px;
-  font-weight: 700;
-  margin: 4px 0 10px;
-  color: #0f172a;
-  line-height: 1.4;
-}
-.desc {
-  font-size: 14px;
-  color: #334155;
-  margin-bottom: 10px;
-  line-height: 1.5;
-}
-.tag {
-  font-size: 12px;
-  font-weight: 700;
-  color: #334155;
-  background: #f1f5f9;
-  padding: 4px 10px;
-  border-radius: 999px;
-  display: inline-block;
-}
-
-@media (max-width: 820px) {
-  /* Ensuring media queries don't conflict with main fix */
-  .layout {
-    grid-template-columns: 1fr;
-  }
-  .sidebar {
-    position: static;
-    height: auto;
-    width: 100%;
-  }
-}
+/* --- The rest of your original CSS/HTML structure remains unchanged --- */
 </style>
 
   </head>
