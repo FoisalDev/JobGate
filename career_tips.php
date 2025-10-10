@@ -71,7 +71,7 @@
           <h3 class="sub-title">Most Popular</h3>
           <div class="tips-grid">
             <article class="tip-card">
-              <img src="./career1.jpg" alt="Career Tip" />
+              <img src="./career_tips_photo/career1.jpg" alt="Career Tip" />
               <div class="tip-body">
                 <p class="author">BY JOHN DOE</p>
                 <h4>How to Write a Winning Resume</h4>
@@ -83,7 +83,7 @@
               </div>
             </article>
             <article class="tip-card">
-              <img src="./career2.jpg" alt="Career Tip" />
+              <img src="./career_tips_photo/career2.jpg" alt="Career Tip" />
               <div class="tip-body">
                 <p class="author">BY JANE SMITH</p>
                 <h4>Interview Mistakes You Must Avoid</h4>
@@ -96,7 +96,7 @@
             </article>
             
             <article class="tip-card">
-              <img src="./career_communication.jpg" alt="Communication Tip" />
+              <img src="./career_tips_photo/career_communication.jpg" alt="Communication Tip" />
               <div class="tip-body">
                 <p class="author">BY AHMAD KHAN</p>
                 <h4>Mastering Workplace Communication</h4>
@@ -108,7 +108,7 @@
             </article>
             
             <article class="tip-card">
-              <img src="./career_portfolio.jpg" alt="Portfolio Strategy" />
+              <img src="./career_tips_photo/career_portfolio.jpg" alt="Portfolio Strategy" />
               <div class="tip-body">
                 <p class="author">BY NUPUR DUTTA</p>
                 <h4>Creating a Portfolio That Converts</h4>
@@ -126,7 +126,7 @@
           <h3 class="sub-title">Growth and Advancement</h3>
           <div class="tips-grid">
             <article class="tip-card">
-              <img src="./career_salary.jpg" alt="Salary Negotiation" />
+              <img src="./career_tips_photo/career_salary.jpg" alt="Salary Negotiation" />
               <div class="tip-body">
                 <p class="author">BY SAMUEL LEE</p>
                 <h4>Salary Negotiation: Know Your Worth</h4>
@@ -137,7 +137,7 @@
               </div>
             </article>
             <article class="tip-card">
-              <img src="./career_mentor.jpg" alt="Mentorship" />
+              <img src="./career_tips_photo/career_mentor.jpg" alt="Mentorship" />
               <div class="tip-body">
                 <p class="author">BY CHLOE WANG</p>
                 <h4>Finding & Utilizing a Career Mentor</h4>
@@ -154,7 +154,7 @@
           <h3 class="sub-title">In the News</h3>
           <div class="tips-grid">
             <article class="tip-card">
-              <img src="./career3.jpg" alt="Career Tip" />
+              <img src="./career_tips_photo/career3.jpg" alt="Career Tip" />
               <div class="tip-body">
                 <p class="author">BY EDITORIAL TEAM</p>
                 <h4>AI is Changing Careers: What You Need to Know</h4>
@@ -167,7 +167,7 @@
             </article>
              
             <article class="tip-card">
-              <img src="./career_burnout.jpg" alt="Preventing Burnout" />
+              <img src="./career_tips_photo/career_burnout.jpg" alt="Preventing Burnout" />
               <div class="tip-body">
                 <p class="author">BY DR. ALI HASSAN</p>
                 <h4>Strategies to Beat Workplace Burnout</h4>
