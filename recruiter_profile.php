@@ -461,8 +461,76 @@ try {
   <link rel="stylesheet" href="recruiter_profile.css" />
   <script src="https://code.iconify.design/iconify-icon/2.1.0/iconify-icon.min.js"></script>
   <style>
+    /* ---------------------------------------------------------------------- */
+    /* --- CORE CSS FIXES FOR FIXED TOPBAR & SIDEBAR --- */
+    /* ---------------------------------------------------------------------- */
+
+    /* 1. HTML/Body Base Settings (Essential for fixed positioning) */
+    html,
+    body {
+      height: 100%;
+      margin: 0; 
+    }
+
+    /* 2. Topbar FIX: Must be fixed to prevent scrolling */
+    .topbar {
+        position: fixed; 
+        top: 0;
+        width: 100%; 
+        z-index: 1000;
+    }
+    /* Compensate for the fixed topbar */
+    body {
+        padding-top: 86px; /* Assuming topbar height is 86px */
+    }
+
+    /* 3. Sidebar FIX: Make it permanently Fixed to the VIEWPORT */
+    .sidebar {
+      /* CORE FIX: Change to FIXED and pin to the viewport edge */
+      position: fixed; 
+      left: 0; /* Pinned to the very left of the viewport */
+      top: 86px; /* Pinned exactly below the fixed topbar */
+      z-index: 999;
+      
+      /* CORE FIX: Flexbox for alignment */
+      display: flex;
+      flex-direction: column;
+
+      /* Calculate height: 100vh - topbar height - small buffer */
+      height: calc(100vh - 86px - 2px); /* Subtracted 2px buffer for rendering stability */
+      overflow-y: auto; 
+      width: 260px; /* Assuming its width */
+      
+      /* Inherited styles: */
+      background:#0b1d3a; 
+      color:#e2e8f0; 
+      padding:12px 14px;
+      gap: 6px;
+    }
+
+    /* 4. Layout: Must adjust the content area to clear the fixed sidebar */
+    .layout {
+        /* CRITICAL FIX: The entire layout container is pushed right to clear the sidebar */
+        margin-left: 260px; /* Sidebar width */
+        width: calc(100% - 260px); /* Adjusting width to fit remaining space */
+        
+        /* Retaining original structure's display and margin */
+        margin-top: 0; 
+        padding: 0; 
+        display: block; /* Simplifying layout to block flow after pushing margin */
+    }
+
+    /* 5. Spacer and Logout Fix */
+    .spacer {
+      flex-grow: 1;
+    }
+    .sbtn.logout {
+      margin-top: auto; 
+      margin-bottom: 0; 
+    }
+    /* --- End Core Fixes --- */
+
     /* Base Styles from the user's provided CSS */
-    .topbar{ position: sticky; top:0; z-index: 2000; background:#ffffff; border-bottom:1px solid #e5e7eb; }
     .topbar-inner{ max-width: 1120px; margin:0 auto; padding:10px 16px; display:flex; align-items:center; justify-content:space-between; gap:16px; }
     .brand{ display:flex; align-items:center; text-decoration:none }
     .logo{ height:40px; display:block }
@@ -472,63 +540,8 @@ try {
     .user-name{ color:#334155; font-weight:600 }
     .avatar{ width:36px; height:36px; border-radius:9999px; display:block }
 
-    /* Layout & Sidebar structure definitions */
-    /* FIX: Changed layout from flex to grid to match profile.php structure */
-    .layout{ 
-        max-width:1120px; 
-        margin:20px auto; 
-        padding:0 16px; 
-        display:grid; /* Changed from flex */
-        grid-template-columns: 260px 1fr; /* Explicit grid definition */
-        gap:18px; 
-        position: relative; 
-        z-index: 1; 
-    }
-    
-    /* MODIFIED: Sidebar to match previous dark structure, and be STICKY */
-    .sidebar{ 
-      width:100%; /* Takes 100% of its grid column */
-      background:#0b1d3a; /* Dark Blue from your previous structure */
-      color:#e2e8f0; /* Light text */
-      padding:12px 14px;
-      /* Core Fix: Use STICKY position within the grid */
-      position: sticky; 
-      top: 86px; /* Pin below the topbar (assuming 86px from profile.php) */
-      z-index: 10; 
-      display: flex; 
-      flex-direction: column; 
-      height: calc(100vh - 86px - 20px); /* Height calculation to fit viewport */
-    }
-
-    /* MODIFIED: SBTN styles to match dark sidebar structure */
-    .sbtn{ display:flex; align-items:center; gap:8px; padding:10px; border-radius:10px; 
-           color:#e2e8f0; /* Light text */
-           text-decoration:none; border:0; 
-           background:transparent; /* Transparent base */
-           margin-bottom:8px;
-           width: 100%;
-           font-weight: 800; /* Matching profile.php button style */
-           cursor: pointer;
-    }
-    .sbtn.active{ 
-        background:rgba(255, 255, 255, 0.1); /* Light background for active */
-        color:#ffffff;
-    }
-    .sbtn:hover{
-        background: rgba(255, 255, 255, 0.06);
-    }
-    .sbtn.logout{ 
-      background:#fee2e2; color:#991b1b; 
-      margin-top: auto; 
-      margin-bottom: 0; 
-    }
-    .spacer {
-      flex-grow: 1; 
-    }
-    /* END MODIFIED SBTN STYLES */
-
-    
-    .content{ flex:1 }
+    /* The original .layout grid definition is now overridden for fixed positioning */
+    .content{ flex:1; padding: 20px; } /* Adding padding to content which was lost in the fix */
 
     .job-post-card,.history-card{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:18px;margin-bottom:16px}
     .form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
