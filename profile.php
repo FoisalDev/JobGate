@@ -202,6 +202,7 @@ $avatarSrc = $profile_photo_url ?: './avatar_placeholder.jpg';
           cursor: pointer;
           font-weight: 800;
           margin-bottom: 6px; 
+          font-size: 18px;
         }
         .sbtn:hover {
           background: rgba(255, 255, 255, 0.06);
