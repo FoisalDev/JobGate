@@ -1,174 +1,197 @@
-/* ========== Header consistency ========== */
+/* 1. HTML/Body Base Settings (Essential for fixed positioning) */
+html,
+body {
+  height: 100%;
+  margin: 0;
+  overflow-x: hidden; /* Prevent horizontal scroll */
+}
+
+/* 2. Topbar FIX: Must be fixed to prevent scrolling */
 .topbar {
-  position: sticky;
+  position: fixed; /* CRITICAL FIX: Fixed */
   top: 0;
+  width: 100%;
   z-index: 1000;
   background: #fff;
   border-bottom: 1px solid #e5e7eb;
 }
+/* Compensate for the fixed topbar */
+body {
+  padding-top: 86px; /* Assuming topbar height is 86px from profile.php */
+}
+
+/* 3. Sidebar FIX: Make it permanently Fixed to the VIEWPORT's LEFT edge */
+.sidebar {
+  /* CRITICAL FIX: Change to FIXED and pin to the viewport edge */
+  position: fixed;
+  left: 0; /* Pinned to the very left of the viewport */
+  top: 86px; /* Pinned exactly below the fixed topbar */
+  z-index: 999;
+
+  /* CORE FIX: Flexbox for alignment */
+  display: flex;
+  flex-direction: column;
+
+  /* Calculate height: 100vh - topbar height - small buffer */
+  height: calc(100vh - 86px - 2px);
+  overflow-y: auto;
+  width: 260px; /* Assuming its width */
+
+  /* Inherited dark styles from profile.css */
+  background: #0b1d3a;
+  color: #e2e8f0;
+  padding: 12px 14px;
+  gap: 6px;
+}
+
+/* 4. Layout: Adjust the content area to clear the fixed sidebar */
+.layout {
+  /* CRITICAL FIX: The layout container is pushed right to clear the sidebar */
+  margin-left: 260px; /* Sidebar width */
+  width: calc(100% - 260px); /* Adjusting width to fit remaining space */
+
+  /* Retaining original layout's structure */
+  margin-top: 0;
+  margin-bottom: 0;
+  padding: 0;
+  display: block; /* Simplifying flow */
+  min-height: calc(100vh - 86px);
+}
+
+/* 5. Content Area: Re-apply necessary padding */
+.content {
+  padding: 24px 28px 48px;
+  background: #f8fafc;
+}
+
+/* 6. Spacer and Logout Fix */
+.spacer {
+  flex-grow: 1;
+}
+.sbtn.logout {
+  margin-top: auto;
+  margin-bottom: 0;
+}
+
+/* --- Applying remaining styles from original home.css --- */
 .topbar-inner {
-  max-width: 1120px;
+  max-width: 1380px;
   margin: 0 auto;
-  padding: 10px 16px;
+  padding: 0 12px;
+  height: 86px;
   display: flex;
   align-items: center;
   justify-content: space-between;
 }
 .logo {
-  height: 40px;
-  display: block;
+  height: clamp(80px, 10vw, 120px);
+  width: auto;
+  object-fit: contain;
 }
-.top-actions .tlink {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 10px;
-  border-radius: 8px;
-  color: #0f172a;
-  text-decoration: none;
-  font-weight: 600;
-}
-.top-actions .tlink:hover {
-  background: #f1f5f9;
-}
-.top-actions .avatar {
-  width: 36px;
-  height: 36px;
-  border-radius: 9999px;
-  object-fit: cover;
-}
-
-/* ========== Layout & Sidebar ========== */
-.layout {
-  max-width: 1120px;
-  margin: 18px auto;
-  padding: 0 16px;
-  display: grid;
-  grid-template-columns: 240px 1fr;
-  gap: 18px;
-}
-.sidebar {
-  position: sticky;
-  top: 72px;
-  align-self: start;
-  background: #fff;
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
-  padding: 12px;
-}
-.sbtn {
+.top-actions {
   display: flex;
   align-items: center;
-  gap: 8px;
-  width: 100%;
-  padding: 10px;
-  background: #f8fafc;
-  border: 0;
-  border-radius: 10px;
+  gap: 18px;
+  margin-left: auto;
+}
+.tlink {
   color: #0f172a;
-  text-align: left;
-  cursor: pointer;
+  text-decoration: none;
+  font-weight: 800;
 }
-.sbtn:hover {
-  background: #eef2f7;
-}
-.sbtn.active {
-  background: #e2e8f0;
-}
-.sbtn.logout {
-  background: #fee2e2;
-  color: #991b1b;
-}
-.sib {
-  opacity: 0.9;
+.avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  object-fit: cover;
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.15);
 }
 
-/* ========== Content Cards ========== */
-.content .section-title {
+.sbtn {
+  font-size: 18px;
+  font-weight: 800;
+  color: #e2e8f0;
+  background: transparent;
+  text-align: left;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 12px;
+  border-radius: 12px;
+  border: none;
+}
+.sbtn.active {
+  background: rgba(255, 255, 255, 0.1);
+}
+.sbtn:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+.sbtn.logout {
+  color: #fee2e2;
+}
+
+.section-title {
   margin: 0 0 10px;
+  font-weight: 900;
 }
 .job-card {
-  display: grid;
-  grid-template-columns: 280px 1fr;
+  display: flex;
   gap: 14px;
   background: #fff;
   border: 1px solid #e5e7eb;
   border-radius: 12px;
   padding: 14px;
   margin-bottom: 12px;
-  align-items: stretch;
+}
+.job-right {
+  flex: 1;
 }
 .job-title {
-  margin: 0 0 8px;
+  margin: 0 0 6px;
   font-weight: 700;
-  color: #0f172a;
 }
 .meta {
   color: #475569;
-  font-size: 14px;
   margin-bottom: 8px;
 }
 .short-desc p {
   margin: 0;
   color: #334155;
   line-height: 1.55;
+  font-size: 14px;
 }
 .view-details {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  margin-top: 10px;
+  border: 1px solid #cbd5e1;
+  padding: 8px 10px;
+  border-radius: 10px;
   text-decoration: none;
-  color: #2563eb;
-  font-weight: 600;
-}
-.view-details:hover {
-  text-decoration: underline;
+  color: #0f172a;
 }
 
-/* ========== Poster / Logo (2:1) ========== */
-.poster {
-  width: 100%;
-  aspect-ratio: 2 / 1; /* requested: width ≈ 2x height */
-  background: #f8fafc;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  overflow: hidden;
+.job-left .poster {
+  width: 260px;
+  height: 130px;
   display: flex;
   align-items: center;
   justify-content: center;
+  background: #f8fafc;
+  border-radius: 10px;
+  position: relative;
+  overflow: hidden;
 }
-.poster img {
+.job-left .poster .job-poster {
   width: 100%;
   height: 100%;
-  object-fit: cover; /* fills the box nicely */
+  object-fit: cover;
   display: block;
-  transform: translateZ(0);
 }
 
-/* ========== Featured list scrollable ========== */
 .featured-scroll {
-  max-height: 70vh; /* adjust as you like */
+  max-height: 700px;
   overflow-y: auto;
-  padding-right: 4px;
-}
-.featured-scroll::-webkit-scrollbar {
-  width: 8px;
-}
-.featured-scroll::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
-  border-radius: 6px;
-}
-
-/* ========== Responsive ========== */
-@media (max-width: 980px) {
-  .layout {
-    grid-template-columns: 1fr;
-  }
-  .sidebar {
-    position: static;
-  }
-  .job-card {
-    grid-template-columns: 1fr;
-  }
+  padding-right: 6px;
 }

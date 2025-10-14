@@ -10,8 +10,8 @@ if (!is_logged_in()) {
 
 // Get user info from session
 $user_id   = $_SESSION['user_id'];
-$user_type = $_SESSION['user_type'];
-$full_name = $_SESSION['full_name'];
+$user_type = $_SESSION['user_type'] ?? 'applicant';
+$full_name = $_SESSION['full_name'] ?? 'Your Name';
 
 // Admin route
 if ($user_type === 'admin') {
@@ -90,34 +90,31 @@ function render_job_card($job) {
     $logo     = htmlspecialchars($job['logo_url'] ?: './avatar_placeholder.jpg');
     $posted   = !empty($job['posted_at']) ? date('M d, Y', strtotime($job['posted_at'])) : '';
 
-    // Open in dedicated page
     $details_link = "home_view_details.php?jobId=" . $job_id;
 
-    // Keep your original structure, only image box tuned for 2:1 ratio and consistent sizing
-    $output = "
-        <article class='job-card' data-job-id='{$job_id}'>
-            <div class='job-left'>
-                <div class='poster placeholder'>
-                    <img src='{$logo}' alt='{$company} Logo' class='job-poster' onerror=\"this.src='./avatar_placeholder.jpg';\">
-                    <span class='poster-label'>Poster/Logo</span>
-                </div>
-            </div>
-            <div class='job-right'>
-                <h3 class='job-title'>{$title} — {$company}</h3>
-                <div class='meta'>
-                    <span>Location: {$location}</span> ·
-                    <span>Type: {$type}</span>".
-                    (!empty($posted) ? " · <span>Posted: {$posted}</span>" : "") .
-                "</div>
-                <div class='short-desc'><p>{$desc}</p></div>
+    // FIX: Removed 'Poster/Logo' text from output
+    return "
+      <article class='job-card' data-job-id='{$job_id}'>
+        <div class='job-left'>
+          <div class='poster placeholder'>
+            <img src='{$logo}' alt='{$company} Logo' class='job-poster' onerror=\"this.src='./avatar_placeholder.jpg';\">
+          </div>
+        </div>
+        <div class='job-right'>
+          <h3 class='job-title'>{$title} — {$company}</h3>
+          <div class='meta'>
+            <span>Location: {$location}</span> ·
+            <span>Type: {$type}</span>".
+            (!empty($posted) ? " · <span>Posted: {$posted}</span>" : "") .
+          "</div>
+          <div class='short-desc'><p>{$desc}</p></div>
 
-                <a class='view-details' href='{$details_link}' target='_blank' rel='noopener'>
-                    <iconify-icon icon='mdi:eye-outline'></iconify-icon> view details
-                </a>
-            </div>
-        </article>
+          <a class='view-details' href='{$details_link}' target='_blank' rel='noopener'>
+            <iconify-icon icon='mdi:eye-outline'></iconify-icon> view details
+          </a>
+        </div>
+      </article>
     ";
-    return $output;
 }
 ?>
 <!DOCTYPE html>
@@ -129,83 +126,7 @@ function render_job_card($job) {
     <link rel="stylesheet" href="home.css" />
     <script src="https://code.iconify.design/iconify-icon/2.1.0/iconify-icon.min.js"></script>
 
-    <style>
-      /* --- FIXES FOR STICKY/NON-SCROLLING SIDEBAR --- */
-      
-      /* Ensure HTML/Body allow full height calculation */
-      html, body {
-          height: 100%;
-      }
-      
-      /* Sidebar: Use STICKY position and enforce column flex */
-      .sidebar { 
-        position: sticky; 
-        top: 86px; /* Assuming topbar is 86px high */
-        z-index: 10; 
-        
-        /* Flexbox for vertical space management */
-        display: flex;
-        flex-direction: column;
-        height: calc(100vh - 86px); /* Full height from under the topbar */
-        
-        /* Inherited styles (assuming dark blue background) */
-        background: #0b1d3a; 
-        color: #e2e8f0; 
-        padding: 12px 14px;
-        width: 260px; 
-      } 
-      
-      /* Spacer: Pushes the logout button to the bottom */
-      .spacer {
-          flex-grow: 1;
-      }
-      
-      /* Logout Button: Ensures it is pinned to the bottom */
-      .sbtn.logout {
-          margin-top: auto;
-          margin-bottom: 0;
-      }
-      
-      /* --- END SIDEBAR FIXES --- */
-      
-      /* keep header/left layout intact; just ensure sidebar stays fixed and feed scrolls */
-      /* .sidebar{ position: sticky; top: 80px; } // REMOVED as redundant/conflicting */
-      
-      /* FIX 1: Increase Featured Job Area Height to 700px */
-      .featured-scroll {
-        max-height: 700px;   /* ADJUSTED HEIGHT */
-        overflow-y: auto;
-        padding-right: 6px;  /* little space for scrollbar */
-      }
-      .featured-scroll::-webkit-scrollbar { width: 8px; }
-      .featured-scroll::-webkit-scrollbar-thumb { background:#cbd5e1; border-radius: 8px; }
-
-      /* Poster box ratio fix: width is ~2x height, image covers nicely */
-      .job-left .poster {
-        width: 260px;           /* width ~ 2x height */
-        height: 130px;          /* 2:1 ratio */
-        display:flex; align-items:center; justify-content:center;
-        background:#f8fafc; border-radius: 10px; position: relative;
-        overflow: hidden;
-      }
-      .job-left .poster .job-poster {
-        width: 100%; height: 100%;
-        object-fit: cover;      /* no stretching, always fills 2:1 box */
-        display:block;
-      }
-      .poster-label{
-        position:absolute; bottom:6px; left:8px; 
-        color:#64748b; font-weight:700; font-size:12px; 
-        background: rgba(255,255,255,0.7); padding:2px 6px; border-radius:6px;
-      }
-
-      /* Make sure cards keep your original look */
-      .job-card{ display:flex; gap:14px; background:#fff; border:1px solid #e5e7eb; border-radius:12px; padding:14px; margin-bottom:12px; }
-      .job-right{ flex:1; }
-      .job-title{ margin:0 0 6px; }
-      .meta{ color:#475569; margin-bottom:8px; }
-      .view-details{ display:inline-flex; align-items:center; gap:6px; border:1px solid #cbd5e1; padding:8px 10px; border-radius:10px; text-decoration:none; color:#0f172a; }
-    </style>
+    
   </head>
   <body>
     <header class="topbar">
@@ -273,7 +194,7 @@ function render_job_card($job) {
                   <?php echo render_job_card($job); ?>
               <?php endforeach; ?>
           <?php else: ?>
-              <p style="padding: 20px; text-align: center; background: #fff; border-radius: 10px; margin-top: 20px; box-shadow: 0 4px 10px rgba(0,0,0,.05);">
+              <p style="padding:20px;text-align:center;background:#fff;border-radius:10px;margin-top:20px;box-shadow:0 4px 10px rgba(0,0,0,.05);">
                 No jobs available right now. Check back later!
               </p>
           <?php endif; ?>
