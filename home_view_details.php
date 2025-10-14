@@ -19,8 +19,23 @@ $jobId = isset($_GET['jobId']) ? trim($_GET['jobId']) : '';
 if ($jobId === '') { header("HTTP/1.1 400 Bad Request"); echo "Invalid request: jobId is required."; exit; }
 
 $job = null; $assessment_required = null;
+$profile_photo_url = './avatar_placeholder.jpg'; // Default placeholder
 
 try {
+  /* --- FIX START: Fetch User's profile photo URL --- */
+  $sqlUser = "SELECT profile_photo_url FROM Users WHERE user_id = ? LIMIT 1";
+  $stmtUser = $conn->prepare($sqlUser);
+  $stmtUser->bind_param("s", $user_id);
+  $stmtUser->execute();
+  $userRow = $stmtUser->get_result()->fetch_assoc();
+  $stmtUser->close();
+  
+  if ($userRow && !empty($userRow['profile_photo_url'])) {
+      $profile_photo_url = $userRow['profile_photo_url'];
+  }
+  $avatarSrc = htmlspecialchars($profile_photo_url);
+  /* --- FIX END --- */
+
   $sql = "SELECT 
             j.job_id,
             j.title,
@@ -166,7 +181,6 @@ $req_ul   = render_requirements($job['requirements'] ?? '');
     </style>
   </head>
   <body>
-    <!-- Top bar -->
     <header class="topbar">
       <div class="topbar-inner">
         <img src="./JobGate_logo.png" alt="JobGate" class="logo" />
@@ -179,7 +193,8 @@ $req_ul   = render_requirements($job['requirements'] ?? '');
             <iconify-icon icon="mdi:account" width="20" height="20"></iconify-icon>
             Profile
           </a>
-          <img src="./avatar_placeholder.jpg" class="avatar" alt="User avatar" />
+          <img src="<?php echo $avatarSrc; ?>" class="avatar" alt="User avatar" 
+               onerror="this.src='./avatar_placeholder.jpg';">
         </nav>
       </div>
     </header>
@@ -190,17 +205,14 @@ $req_ul   = render_requirements($job['requirements'] ?? '');
       </a>
 
       <section class="details-card">
-        <!-- Poster -->
         <div class="poster big">
           <img src="<?php echo $logo; ?>" alt="<?php echo $company; ?> Poster"
                onerror="this.src='./avatar_placeholder.jpg'">
         </div>
 
-        <!-- Right column: content -->
         <div class="desc">
           <h2><?php echo $title; ?> — <?php echo $company; ?></h2>
 
-          <!-- Meta chips -->
           <div class="meta-row">
             <?php if ($location): ?>
               <span class="chip"><iconify-icon icon="mdi:map-marker-outline"></iconify-icon><?php echo htmlspecialchars($location); ?></span>
@@ -220,7 +232,6 @@ $req_ul   = render_requirements($job['requirements'] ?? '');
             <?php endif; ?>
           </div>
 
-          <!-- Scrollable long content -->
           <div class="desc-scroll">
             <h3>Description</h3>
             <p><?php echo $desc; ?></p>
@@ -231,7 +242,6 @@ $req_ul   = render_requirements($job['requirements'] ?? '');
             <?php endif; ?>
           </div>
 
-          <!-- CTA -->
           <div class="cta-row">
             <a class="btn-apply" href="<?php echo 'apply_job.php?jobId='.urlencode($jobId); ?>">
               <iconify-icon icon="mdi:send"></iconify-icon> Apply Now
@@ -242,5 +252,3 @@ $req_ul   = render_requirements($job['requirements'] ?? '');
     </main>
   </body>
 </html>
-
-

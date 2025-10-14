@@ -18,6 +18,29 @@ if ($user_type === 'admin') {
     redirect('admin_dashboard.php');
 }
 
+/* Ensure Users.profile_photo_url exists (best-effort) */
+try {
+  $q = $conn->prepare("SELECT COUNT(*) c FROM INFORMATION_SCHEMA.COLUMNS
+                       WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME='Users' AND COLUMN_NAME='profile_photo_url'");
+  $q->execute(); $row = $q->get_result()->fetch_assoc(); $q->close();
+  if (empty($row['c'])) { $conn->query("ALTER TABLE Users ADD COLUMN profile_photo_url VARCHAR(255) NULL"); }
+} catch (Throwable $e) { /* ignore */ }
+
+/* Load current profile photo URL */
+$profile_photo_url = null;
+try {
+  $stmt = $conn->prepare("SELECT profile_photo_url FROM Users WHERE user_id = ? LIMIT 1");
+  $stmt->bind_param("s", $user_id);
+  $stmt->execute();
+  $u = $stmt->get_result()->fetch_assoc();
+  $stmt->close();
+  if ($u) {
+    $profile_photo_url = $u['profile_photo_url'] ?: null;
+  }
+} catch (Throwable $e) {}
+
+$avatarSrc = $profile_photo_url ?: './avatar_placeholder.jpg'; // Default to placeholder if not set
+
 // ✅ Profile page by role (unchanged)
 $profilePage = ($user_type === 'recruiter') ? 'recruiter_profile.php' : 'profile.php';
 
@@ -106,14 +129,51 @@ function render_job_card($job) {
     <link rel="stylesheet" href="home.css" />
     <script src="https://code.iconify.design/iconify-icon/2.1.0/iconify-icon.min.js"></script>
 
-    <!-- 🔧 Minimal CSS tweaks ONLY; layout kept intact -->
     <style>
-      /* keep header/left layout intact; just ensure sidebar stays fixed and feed scrolls */
-      .sidebar{ position: sticky; top: 80px; } /* left button side div stays fixed relative to viewport after header */
+      /* --- FIXES FOR STICKY/NON-SCROLLING SIDEBAR --- */
       
-      /* Featured list scrollable container */
+      /* Ensure HTML/Body allow full height calculation */
+      html, body {
+          height: 100%;
+      }
+      
+      /* Sidebar: Use STICKY position and enforce column flex */
+      .sidebar { 
+        position: sticky; 
+        top: 86px; /* Assuming topbar is 86px high */
+        z-index: 10; 
+        
+        /* Flexbox for vertical space management */
+        display: flex;
+        flex-direction: column;
+        height: calc(100vh - 86px); /* Full height from under the topbar */
+        
+        /* Inherited styles (assuming dark blue background) */
+        background: #0b1d3a; 
+        color: #e2e8f0; 
+        padding: 12px 14px;
+        width: 260px; 
+      } 
+      
+      /* Spacer: Pushes the logout button to the bottom */
+      .spacer {
+          flex-grow: 1;
+      }
+      
+      /* Logout Button: Ensures it is pinned to the bottom */
+      .sbtn.logout {
+          margin-top: auto;
+          margin-bottom: 0;
+      }
+      
+      /* --- END SIDEBAR FIXES --- */
+      
+      /* keep header/left layout intact; just ensure sidebar stays fixed and feed scrolls */
+      /* .sidebar{ position: sticky; top: 80px; } // REMOVED as redundant/conflicting */
+      
+      /* FIX 1: Increase Featured Job Area Height to 700px */
       .featured-scroll {
-        max-height: 520px;   /* adjust as you like */
+        max-height: 700px;   /* ADJUSTED HEIGHT */
         overflow-y: auto;
         padding-right: 6px;  /* little space for scrollbar */
       }
@@ -148,27 +208,25 @@ function render_job_card($job) {
     </style>
   </head>
   <body>
-    <!-- Top bar -->
     <header class="topbar">
       <div class="topbar-inner">
         <img src="./JobGate_logo.png" alt="JobGate" class="logo" />
 
         <nav class="top-actions" aria-label="Top actions">
           <a href="#" class="tlink">Home</a>
-          <!-- ✅ Dynamic Profile Link -->
           <a href="<?php echo $profilePage; ?>" class="tlink">Profile</a>
           <img
-            src="./avatar_placeholder.jpg"
+            src="<?php echo htmlspecialchars($avatarSrc); ?>"
             class="avatar"
             alt="<?php echo htmlspecialchars($full_name); ?> avatar"
             title="<?php echo htmlspecialchars($full_name); ?>"
+            onerror="this.src='./avatar_placeholder.jpg';"
           />
         </nav>
       </div>
     </header>
 
     <div class="layout">
-      <!-- Sidebar (unchanged) -->
       <aside class="sidebar">
         <button class="sbtn active">
           <iconify-icon icon="mdi:home" class="sib"></iconify-icon>Feed
@@ -206,11 +264,9 @@ function render_job_card($job) {
         </a>
       </aside>
 
-      <!-- Main feed -->
       <main class="content">
         <h2 class="section-title">Featured Jobs (Latest <?php echo count($featured_jobs); ?>)</h2>
 
-        <!-- ✅ Scrollable featured jobs list; layout unchanged -->
         <div class="featured-scroll">
           <?php if (!empty($featured_jobs)): ?>
               <?php foreach ($featured_jobs as $job): ?>

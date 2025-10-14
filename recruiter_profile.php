@@ -199,8 +199,53 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ( $_POST['action'] ?? '' ) === 'sav
         exit;
 
     } catch (Throwable $e) {
-        if ($conn && $conn->errno) $conn->rollback();
+        if ($conn && $conn->errno) {
+            try {
+                $conn->rollback();
+            } catch (\Throwable $rb_e) { /* ignore rollback error */ }
+        }
         $message = "Profile Save Error: ".$e->getMessage();
+        $message_type = 'error';
+    }
+}
+
+/* POST: Delete Job */
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ( $_POST['action'] ?? '' ) === 'delete_job') {
+    try {
+        if (!$recruiter_id) throw new Exception("No recruiter profile found.");
+        $job_id_to_delete = sanitize_input($_POST['job_id'] ?? '');
+
+        if (empty($job_id_to_delete)) throw new Exception("Job ID missing for deletion.");
+
+        // NOTE: JobApplication and JobAssessmentRequirements tables might have foreign keys
+        // pointing to Jobs. You might need to delete from those tables first, 
+        // or ensure your foreign keys have ON DELETE CASCADE set.
+        
+        $conn->begin_transaction();
+
+        // Delete the job itself, ensuring the current user owns it
+        $sqlDel = "DELETE FROM Jobs WHERE job_id = ? AND recruiter_id = ?";
+        $stDel = $conn->prepare($sqlDel);
+        $stDel->bind_param("ss", $job_id_to_delete, $recruiter_id);
+        $stDel->execute();
+        
+        if ($stDel->affected_rows === 0) {
+            $conn->rollback();
+            throw new Exception("Deletion failed. Job not found or not owned by you.");
+        }
+        $stDel->close();
+        
+        $conn->commit();
+        header("Location: recruiter_profile.php?msg=deleted");
+        exit;
+
+    } catch (Throwable $e) {
+        if ($conn && $conn->errno) {
+            try {
+                $conn->rollback();
+            } catch (\Throwable $rb_e) { /* ignore rollback error */ }
+        }
+        $message = "Deletion Error: ".$e->getMessage();
         $message_type = 'error';
     }
 }
@@ -344,7 +389,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ( $_POST['action'] ?? '' ) === 'pos
     exit;
 
   } catch (Throwable $e) {
-    if ($conn && $conn->errno) $conn->rollback();
+    if ($conn && $conn->errno) {
+        try {
+            $conn->rollback();
+        } catch (\Throwable $rb_e) { /* ignore rollback error */ }
+    }
     $message = "Error: ".$e->getMessage();
     $message_type = 'error';
   }
@@ -360,6 +409,9 @@ if (isset($_GET['msg'])) {
         $message_type = 'success';
     } elseif ($_GET['msg'] === 'updated') {
         $message = "Job updated successfully!";
+        $message_type = 'success';
+    } elseif ($_GET['msg'] === 'deleted') {
+        $message = "Job successfully deleted!";
         $message_type = 'success';
     }
 }
@@ -409,8 +461,76 @@ try {
   <link rel="stylesheet" href="recruiter_profile.css" />
   <script src="https://code.iconify.design/iconify-icon/2.1.0/iconify-icon.min.js"></script>
   <style>
-    /* Base Styles */
-    .topbar{ position: sticky; top:0; z-index: 2000; background:#ffffff; border-bottom:1px solid #e5e7eb; }
+    /* ---------------------------------------------------------------------- */
+    /* --- CORE CSS FIXES FOR FIXED TOPBAR & SIDEBAR --- */
+    /* ---------------------------------------------------------------------- */
+
+    /* 1. HTML/Body Base Settings (Essential for fixed positioning) */
+    html,
+    body {
+      height: 100%;
+      margin: 0; 
+    }
+
+    /* 2. Topbar FIX: Must be fixed to prevent scrolling */
+    .topbar {
+        position: fixed; 
+        top: 0;
+        width: 100%; 
+        z-index: 1000;
+    }
+    /* Compensate for the fixed topbar */
+    body {
+        padding-top: 86px; /* Assuming topbar height is 86px */
+    }
+
+    /* 3. Sidebar FIX: Make it permanently Fixed to the VIEWPORT */
+    .sidebar {
+      /* CORE FIX: Change to FIXED and pin to the viewport edge */
+      position: fixed; 
+      left: 0; /* Pinned to the very left of the viewport */
+      top: 86px; /* Pinned exactly below the fixed topbar */
+      z-index: 999;
+      
+      /* CORE FIX: Flexbox for alignment */
+      display: flex;
+      flex-direction: column;
+
+      /* Calculate height: 100vh - topbar height - small buffer */
+      height: calc(100vh - 86px - 2px); /* Subtracted 2px buffer for rendering stability */
+      overflow-y: auto; 
+      width: 260px; /* Assuming its width */
+      
+      /* Inherited styles: */
+      background:#0b1d3a; 
+      color:#e2e8f0; 
+      padding:12px 14px;
+      gap: 6px;
+    }
+
+    /* 4. Layout: Must adjust the content area to clear the fixed sidebar */
+    .layout {
+        /* CRITICAL FIX: The entire layout container is pushed right to clear the sidebar */
+        margin-left: 260px; /* Sidebar width */
+        width: calc(100% - 260px); /* Adjusting width to fit remaining space */
+        
+        /* Retaining original structure's display and margin */
+        margin-top: 0; 
+        padding: 0; 
+        display: block; /* Simplifying layout to block flow after pushing margin */
+    }
+
+    /* 5. Spacer and Logout Fix */
+    .spacer {
+      flex-grow: 1;
+    }
+    .sbtn.logout {
+      margin-top: auto; 
+      margin-bottom: 0; 
+    }
+    /* --- End Core Fixes --- */
+
+    /* Base Styles from the user's provided CSS */
     .topbar-inner{ max-width: 1120px; margin:0 auto; padding:10px 16px; display:flex; align-items:center; justify-content:space-between; gap:16px; }
     .brand{ display:flex; align-items:center; text-decoration:none }
     .logo{ height:40px; display:block }
@@ -420,28 +540,8 @@ try {
     .user-name{ color:#334155; font-weight:600 }
     .avatar{ width:36px; height:36px; border-radius:9999px; display:block }
 
-    .layout{ max-width:1120px; margin:20px auto; padding:0 16px; display:flex; gap:18px; position: relative; z-index: 1; }
-    
-    /* MODIFIED: Sidebar to use flex column for bottom alignment */
-    .sidebar{ 
-      width:230px; background:#fff; border:1px solid #e5e7eb; border-radius:12px; padding:12px;
-      position: sticky; top:72px; z-index: 1; 
-      display: flex; flex-direction: column; /* Use flex column */
-      height: calc(100vh - 72px - 20px); /* Fill available vertical space */
-    }
-
-    .sbtn{ display:flex; align-items:center; gap:8px; padding:10px; border-radius:10px; color:#0f172a; text-decoration:none; border:0; background:#f8fafc; margin-bottom:8px }
-    .sbtn.active{ background:#e2e8f0 }
-    .sbtn.logout{ 
-      background:#fee2e2; color:#991b1b; 
-      margin-top: auto; /* Push logout to the bottom */
-      margin-bottom: 0; /* Remove bottom margin */
-    }
-    .spacer {
-      flex-grow: 1; /* Pushes the logout button down */
-    }
-    
-    .content{ flex:1 }
+    /* The original .layout grid definition is now overridden for fixed positioning */
+    .content{ flex:1; padding: 20px; } /* Adding padding to content which was lost in the fix */
 
     .job-post-card,.history-card{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:18px;margin-bottom:16px}
     .form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
@@ -510,7 +610,6 @@ try {
     <aside class="sidebar">
       <a class="sbtn" href="home.php"><iconify-icon icon="mdi:view-dashboard"></iconify-icon>Dashboard</a>
       <a class="sbtn active" href="recruiter_profile.php"><iconify-icon icon="mdi:briefcase-edit-outline"></iconify-icon>Post Job</a>
-      <a class="sbtn" href="jobs.php"><iconify-icon icon="mdi:account-group-outline"></iconify-icon>View Applicants</a>
       <div class="spacer"></div>
       <a class="sbtn logout" href="logout.php"><iconify-icon icon="mdi:logout"></iconify-icon>Log out</a>
     </aside>
@@ -700,15 +799,27 @@ try {
             </div>
           </div>
 
-          <div class="form-actions" style="margin-top:10px">
-            <button type="submit" class="btn-primary">
-                <iconify-icon icon="<?php echo $job_to_edit ? 'mdi:content-save-outline' : 'mdi:send'; ?>"></iconify-icon> 
-                <?php echo $job_to_edit ? 'Update Job' : 'Publish Job'; ?>
-            </button>
+          <div class="form-actions" style="margin-top:10px; display: flex; justify-content: space-between; align-items: center;">
+            <div style="display: flex; gap: 10px;">
+                <button type="submit" class="btn-primary">
+                    <iconify-icon icon="<?php echo $job_to_edit ? 'mdi:content-save-outline' : 'mdi:send'; ?>"></iconify-icon> 
+                    <?php echo $job_to_edit ? 'Update Job' : 'Publish Job'; ?>
+                </button>
+                <?php if ($job_to_edit): ?>
+                <a href="recruiter_profile.php" class="btn-ghost" style="text-decoration: none;">
+                    <iconify-icon icon="mdi:cancel"></iconify-icon> Cancel Edit
+                </a>
+                <?php endif; ?>
+            </div>
+            
             <?php if ($job_to_edit): ?>
-              <a href="recruiter_profile.php" class="btn-ghost" style="text-decoration: none;">
-                <iconify-icon icon="mdi:cancel"></iconify-icon> Cancel Edit
-              </a>
+            <button type="button" 
+                    id="deleteJobBtn"
+                    class="btn-primary" 
+                    style="background: #dc2626;"
+                    onclick="confirmDelete('<?php echo htmlspecialchars($job_to_edit['job_id']); ?>')">
+                <iconify-icon icon="mdi:delete"></iconify-icon> Delete Job
+            </button>
             <?php endif; ?>
           </div>
         </form>
@@ -756,6 +867,11 @@ try {
     </main>
   </div>
   
+  <form id="deleteForm" method="POST" action="recruiter_profile.php" style="display: none;">
+      <input type="hidden" name="action" value="delete_job">
+      <input type="hidden" name="job_id" id="deleteJobId">
+  </form>
+
   <script>
     // ** Photo Upload/Preview Functionality for User Profile Photo **
     const btnPhotoUpload = document.getElementById('btnPhotoUpload');
@@ -785,6 +901,14 @@ try {
       }
     }
     
+    // ** Job Deletion Functionality **
+    function confirmDelete(jobId) {
+        if (confirm("Are you sure you want to delete this job? This action cannot be undone.")) {
+            document.getElementById('deleteJobId').value = jobId;
+            document.getElementById('deleteForm').submit();
+        }
+    }
+
     // Call scroll function if job_id is present in the URL on page load
     <?php if ($job_to_edit): ?>
         scrollToJobPost();

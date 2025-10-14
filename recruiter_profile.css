@@ -2,17 +2,41 @@
 
 /* Layout adjustments */
 .layout {
+  /* FIX 1: Adjust max-width and margin to match the main content container's centering */
+  max-width: 1380px; /* Use the widest assumed max-width */
+  width: 96%;
+  margin: 0 auto;
+  padding: 0 0; /* Removing padding to let the grid manage space */
+
+  display: grid;
   grid-template-columns: 260px 1fr;
   min-height: calc(100vh - 86px);
-}
-.sidebar {
-  /* Inherits styles from home.css */
+  gap: 18px; /* Restoring the gap between sidebar and content */
 }
 
-/* Main Content */
+/* Sidebar FIX: Fixed position within the centered layout */
+.sidebar {
+  /* Inherits dark background/text color from home.css */
+
+  /* CORE FIX: Position sticky within the grid column */
+  position: sticky;
+  top: 86px;
+  z-index: 1000;
+  width: 100%; /* Take up 100% of its grid column */
+  height: calc(100vh - 86px); /* Fill remaining vertical height */
+
+  /* Structural styles */
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Main Content Adjustment */
 .content {
+  /* No need for margin-left if sidebar is sticky within the grid */
   padding: 24px 28px 48px;
 }
+
 /* Recruiter Header/Welcome Section */
 .profile-head {
   display: flex;
@@ -175,5 +199,15 @@
   .topbar-inner .tlink:not(:last-child),
   .topbar-inner .avatar {
     display: none;
+  }
+  /* In mobile view, unfix the sidebar and let it be part of the flow */
+  .sidebar {
+    position: static;
+    height: auto;
+    width: 100%;
+    margin-bottom: 20px;
+  }
+  .content {
+    margin-left: 0; /* Remove margin when sidebar is not fixed */
   }
 }
