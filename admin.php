@@ -247,15 +247,14 @@ $profilePage = 'profile.php';
 <body>
   <!-- Topbar (same structure) -->
   <header class="topbar">
-    <div class="topbar-inner">
-      <img src="./JobGate_logo.png" alt="JobGate" class="logo" />
-      <nav class="top-actions" aria-label="Top actions">
-        <a href="home.php" class="tlink">Home</a>
-        <a href="<?php echo htmlspecialchars($profilePage); ?>" class="tlink">Profile</a>
-        <img src="<?php echo htmlspecialchars($avatarSrc); ?>" class="avatar" alt="User avatar" />
-      </nav>
-    </div>
-  </header>
+  <div class="topbar-inner">
+    <img src="./JobGate_logo.png" alt="JobGate" class="logo" />
+    <!-- Removed Home, Profile, and Avatar -->
+    <nav class="top-actions" aria-label="Top actions">
+      <!-- Empty nav kept for structure -->
+    </nav>
+  </div>
+</header>
 
   <div class="layout">
     <!-- Sidebar (same look) -->
