@@ -1,71 +1,84 @@
 <?php
+// login.php (updated)
+session_start();
 require_once 'db_connect.php';
 
 $error = '';
 $email = '';
-$user_type = ''; // Will be used to store the user type upon successful login
 
-// Check if user is already logged in, redirect to home.php if true
+// যদি আগেই লগইন করা থাকে, রোল দেখে রিডাইরেক্ট
 if (is_logged_in()) {
-    redirect('home.php');
+    if (!empty($_SESSION['user_type']) && $_SESSION['user_type'] === 'admin') {
+        redirect('admin.php');
+    } else {
+        redirect('home.php');
+    }
 }
 
-// Check if form was submitted
-if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    $email = trim($_POST['email']);
-    $password = $_POST['password'];
-    
-    // 1. Basic Validation
-    if (empty($email) || empty($password)) {
+// POST সাবমিশন এলে প্রোসেস
+if ($_SERVER["REQUEST_METHOD"] === "POST") {
+    $email = trim($_POST['email'] ?? '');
+    $password = $_POST['password'] ?? '';
+
+    // 1) বেসিক ভ্যালিডেশন
+    if ($email === '' || $password === '') {
         $error = "Please enter both email and password.";
     }
 
-    if (empty($error)) {
-        // 2. Hash the input password using SHA256 for comparison
-        $input_password_hash = hash('sha256', $password);
-
-        // 3. Prepare and execute the query to find the user
-        $stmt = $conn->prepare("SELECT user_id, password_hash, user_type, full_name FROM Users WHERE email = ?");
+    if ($error === '') {
+        // 2) ইউজার লোড
+        // NOTE: এখানে ধরে নেওয়া হয়েছে যে Users টেবিলে column নাম: password_hash (bcrypt/argon),
+        // লিগ্যাসি ক্ষেত্রে একই কলামে SHA-256 হ্যাশ থাকতে পারে— তাই fallback রাখা হয়েছে।
+        $stmt = $conn->prepare("
+            SELECT user_id, full_name, email, user_type, password_hash
+            FROM Users
+            WHERE email = ?
+            LIMIT 1
+        ");
         $stmt->bind_param("s", $email);
         $stmt->execute();
-        $result = $stmt->get_result();
+        $res = $stmt->get_result();
+        $user = $res->fetch_assoc();
+        $stmt->close();
 
-        if ($result->num_rows === 1) {
-            $user = $result->fetch_assoc();
-            
-            // 4. Compare the hashed password
-            if ($user['password_hash'] === $input_password_hash) {
-                // Password matches, login successful
-                
-                // 5. Start session and set session variables
-                session_start();
+        if ($user) {
+            $db_hash = $user['password_hash'] ?? '';
+
+            $ok = false;
+
+            // 3) প্রথমে আধুনিক হ্যাশ (password_hash) চেক
+            if ($db_hash && strlen($db_hash) > 0 && password_get_info($db_hash)['algo']) {
+                // bcrypt/argon হলে
+                $ok = password_verify($password, $db_hash);
+            } else {
+                // 4) লিগ্যাসি fallback: SHA-256 তুলনা (তোমার পুরনো সিস্টেমের সাথে সামঞ্জস্য)
+                $input_sha256 = hash('sha256', $password);
+                $ok = hash_equals($db_hash, $input_sha256);
+            }
+
+            if ($ok) {
+                // 5) সেশন সেট
                 $_SESSION['user_id']   = $user['user_id'];
                 $_SESSION['user_type'] = $user['user_type'];
                 $_SESSION['full_name'] = $user['full_name'];
 
-                // ✅ NEW: set profile page based on role
-                if ($user['user_type'] === 'recruiter') {
-                    $_SESSION['profile_page'] = 'recruiter_profile.php';
-                } else { // applicant (or any non-admin default)
-                    $_SESSION['profile_page'] = 'profile.php';
-                }
-                
-                // 6. Redirect to the appropriate home page based on user type
+                // প্রোফাইল পেজ hint (ইচ্ছা করলে ব্যবহার করো)
+                $_SESSION['profile_page'] = ($user['user_type'] === 'recruiter')
+                    ? 'recruiter_profile.php'
+                    : 'profile.php';
+
+                // 6) রোল অনুযায়ী রিডাইরেক্ট
                 if ($user['user_type'] === 'admin') {
-                    redirect('admin_dashboard.php'); 
+                    redirect('admin.php');   // ✅ অ্যাডমিন হলে সরাসরি admin.php
                 } else {
                     redirect('home.php');
                 }
             } else {
-                // Password incorrect
                 $error = "Invalid email or password.";
             }
         } else {
-            // Email not found
             $error = "Invalid email or password.";
         }
-
-        $stmt->close();
     }
 }
 ?>
@@ -98,15 +111,14 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
       <aside class="card">
         <h2 class="card-title">Log In</h2>
         <p class="card-sub">Welcome back to JobGate</p>
-        
-        <!-- PHP error message -->
+
         <?php if ($error): ?>
           <div style="background-color: #fca5a5; color: #991b1b; padding: 10px; border-radius: 8px; margin-bottom: 15px; font-weight: 700; text-align: center;">
             <?php echo htmlspecialchars($error); ?>
           </div>
         <?php endif; ?>
 
-        <form class="form" action="login.php" method="post">
+        <form class="form" action="login.php" method="post" novalidate>
           <!-- Email -->
           <label class="field">
             <div class="input-wrap">
@@ -123,6 +135,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 name="password"
                 placeholder="Password"
                 required
+                autocomplete="current-password"
               />
               <button
                 type="button"
@@ -138,7 +151,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             </div>
           </label>
 
-          <!-- Remember + Forgot -->
           <div class="row-between">
             <label class="remember">
               <input type="checkbox" name="remember" /> <span>Remember me</span>
@@ -146,18 +158,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             <a href="#" class="muted">Forgot Password?</a>
           </div>
 
-          <!-- Sign In button -->
-          <button
-            class="btn-primary"
-            type="submit"
-          >
-            Sign In
-          </button>
+          <button class="btn-primary" type="submit">Sign In</button>
 
-          <!-- Alternative -->
           <div class="alt">Or continue with</div>
 
-          <!-- Social Buttons -->
           <button type="button" class="btn-social">
             <iconify-icon icon="logos:google-icon"></iconify-icon>
             Continue with Google
@@ -186,5 +190,4 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
   </body>
 </html>
 
-<!-- admin1@jobgate.com - adminpass1
-admin2@jobgate.com - adminpass2 -->
+<!-- admin1@gmail.com - adminpass1 -->
