@@ -27,7 +27,7 @@ function excerpt($text, $len = 180){
   return mb_substr($text, 0, $len-1).'…';
 }
 
-/* Fetch events (no created_at dependency) */
+/* Fetch events (latest first; null date last) */
 $events = [];
 $events_error = '';
 try {
@@ -56,7 +56,7 @@ try {
   <script src="https://code.iconify.design/iconify-icon/2.1.0/iconify-icon.min.js"></script>
 </head>
 <body>
-  <!-- Topbar (same as অন্যান্য পেজ) -->
+  <!-- Topbar -->
   <header class="topbar">
     <div class="topbar-inner">
       <img src="./JobGate_logo.png" alt="JobGate" class="logo" />
@@ -69,38 +69,27 @@ try {
   </header>
 
   <div class="layout">
-    <!-- Sidebar (unchanged) -->
+    <!-- Sidebar -->
     <aside class="sidebar">
       <button class="sbtn" onclick="window.location.href='home.php'">
         <iconify-icon icon="mdi:home" class="sib"></iconify-icon>Feed
       </button>
-
       <button class="sbtn" onclick="window.location.href='career_tips.php'">
-        <iconify-icon icon="mdi:lightbulb-on-outline" class="sib"></iconify-icon>
-        Career Tips
+        <iconify-icon icon="mdi:lightbulb-on-outline" class="sib"></iconify-icon>Career Tips
       </button>
-
       <button class="sbtn active" onclick="window.location.href='job_events.php'">
         <iconify-icon icon="mdi:calendar-star" class="sib"></iconify-icon>Job Events
       </button>
-
       <button class="sbtn" onclick="window.location.href='courses.php'">
-        <iconify-icon icon="mdi:book-open-variant" class="sib"></iconify-icon>
-        Courses
+        <iconify-icon icon="mdi:book-open-variant" class="sib"></iconify-icon>Courses
       </button>
-
       <button class="sbtn" onclick="window.location.href='skill_assessment.php'">
-        <iconify-icon icon="mdi:account-check-outline" class="sib"></iconify-icon>
-        Skill Assessment
+        <iconify-icon icon="mdi:account-check-outline" class="sib"></iconify-icon>Skill Assessment
       </button>
-
       <button class="sbtn" onclick="window.location.href='jobs.php'">
-        <iconify-icon icon="mdi:briefcase-outline" class="sib"></iconify-icon>
-        Jobs
+        <iconify-icon icon="mdi:briefcase-outline" class="sib"></iconify-icon>Jobs
       </button>
-
       <div class="spacer"></div>
-
       <a class="sbtn logout" href="logout.php" style="text-decoration: none;">
         <iconify-icon icon="mdi:logout" class="sib"></iconify-icon>Log out
       </a>
