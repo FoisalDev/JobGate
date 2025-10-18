@@ -1,5 +1,5 @@
 <?php
-// admin.php — Admin dashboard (post Job Events + manage users) with same structure
+// admin.php — Admin dashboard (post Job Events + manage users)
 session_start();
 require_once 'db_connect.php';
 
@@ -24,7 +24,7 @@ function guid(){
   return vsprintf('%s%s-%s-%s-%s-%s%s%s', str_split(bin2hex($d), 4));
 }
 
-/* Ensure JobEvents table exists (safe no-op if already present) */
+/* Ensure JobEvents exists (safe) */
 try {
   $conn->query("
     CREATE TABLE IF NOT EXISTS JobEvents (
@@ -34,13 +34,12 @@ try {
       organizer VARCHAR(150) NULL,
       start_date DATE NOT NULL,
       end_date DATE NULL,
-      image_url VARCHAR(255) NULL,
-      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      image_url VARCHAR(255) NULL
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
   ");
-} catch (Throwable $e) { /* ignore but page will still work */ }
+} catch (Throwable $e) {}
 
-/* Avatar shown in header (admin’s own) */
+/* Avatar (optional) */
 $avatarSrc = './avatar_placeholder.jpg';
 try {
   $stp = $conn->prepare("SELECT profile_photo_url FROM Users WHERE user_id = ? LIMIT 1");
@@ -51,10 +50,9 @@ try {
   if (!empty($r['profile_photo_url'])) $avatarSrc = $r['profile_photo_url'];
 } catch (Throwable $e) {}
 
-/* Messages */
 $msg = ''; $msg_type = ''; // success | error
 
-/* Handle: Add Job Event */
+/* Add Event */
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'add_event') {
   try {
     $title      = sanitize($_POST['title'] ?? '');
@@ -64,10 +62,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'add_e
     $desc       = trim($_POST['description'] ?? '');
 
     if ($title === '' || $start_date === '' || $desc === '') {
-      throw new Exception("Title, Start Date and Description are required.");
+      throw new Exception("Title, Start Date এবং Description আবশ্যক।");
     }
 
-    // Optional image upload
+    // image (optional)
     $image_url = null;
     if (!empty($_FILES['image']['name']) && $_FILES['image']['error'] === UPLOAD_ERR_OK) {
       $dirFs  = __DIR__ . '/uploads/event_images/';
@@ -75,14 +73,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'add_e
       if (!is_dir($dirFs)) mkdir($dirFs, 0777, true);
 
       $info = @getimagesize($_FILES['image']['tmp_name']);
-      if ($info === false) throw new Exception("Invalid image file.");
+      if ($info === false) throw new Exception("ভুল ইমেজ ফাইল।");
       $ext = strtolower(pathinfo($_FILES['image']['name'], PATHINFO_EXTENSION));
-      if (!in_array($ext, ['jpg','jpeg','png','gif','webp'], true)) throw new Exception("Only JPG, JPEG, PNG, GIF, WEBP allowed.");
-      if ($_FILES['image']['size'] > 3*1024*1024) throw new Exception("Max 3MB allowed.");
+      if (!in_array($ext, ['jpg','jpeg','png','gif','webp'], true)) throw new Exception("শুধু JPG, JPEG, PNG, GIF, WEBP দেওয়া যাবে।");
+      if ($_FILES['image']['size'] > 3*1024*1024) throw new Exception("সর্বোচ্চ 3MB ইমেজ আপলোড করা যাবে।");
 
       $fname = guid().'.'.$ext;
       if (!move_uploaded_file($_FILES['image']['tmp_name'], $dirFs.$fname)) {
-        throw new Exception("Failed to save image. Check permissions on uploads/event_images/.");
+        throw new Exception("ইমেজ সেভ করা যায়নি (uploads/event_images/ পারমিশন চেক করুন)।");
       }
       $image_url = $dirWeb.$fname;
     }
@@ -92,11 +90,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'add_e
     $stmt->bind_param("sssssss", $event_id, $title, $desc, $organizer, $start_date, $end_date, $image_url);
     $stmt->execute(); $stmt->close();
 
-    $msg = "Event posted successfully!";
-    $msg_type = 'success';
-    // prevent resubmit
-    header("Location: admin.php?ok=1");
-    exit;
+    header("Location: admin.php?ok=1#events"); exit;
 
   } catch (Throwable $e) {
     $msg = "Error posting event: ".$e->getMessage();
@@ -104,29 +98,77 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'add_e
   }
 }
 
-/* Handle: Delete User */
+/* Edit Event */
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'edit_event') {
+  try {
+    $eid        = sanitize($_POST['event_id'] ?? '');
+    $title      = sanitize($_POST['title'] ?? '');
+    $organizer  = sanitize($_POST['organizer'] ?? '');
+    $start_date = sanitize($_POST['start_date'] ?? '');
+    $end_date   = sanitize($_POST['end_date'] ?? '');
+    $desc       = trim($_POST['description'] ?? '');
+
+    if ($eid === '') throw new Exception("Missing event id.");
+    if ($title === '' || $start_date === '' || $desc === '') {
+      throw new Exception("Title, Start Date এবং Description আবশ্যক।");
+    }
+
+    // current image
+    $st = $conn->prepare("SELECT image_url FROM JobEvents WHERE event_id = ? LIMIT 1");
+    $st->bind_param("s", $eid);
+    $st->execute(); $current = $st->get_result()->fetch_assoc(); $st->close();
+    $image_url = $current['image_url'] ?? null;
+
+    // new image (optional)
+    if (!empty($_FILES['image']['name']) && $_FILES['image']['error'] === UPLOAD_ERR_OK) {
+      $dirFs  = __DIR__ . '/uploads/event_images/';
+      $dirWeb = 'uploads/event_images/';
+      if (!is_dir($dirFs)) mkdir($dirFs, 0777, true);
+
+      $info = @getimagesize($_FILES['image']['tmp_name']);
+      if ($info === false) throw new Exception("ভুল ইমেজ ফাইল।");
+      $ext = strtolower(pathinfo($_FILES['image']['name'], PATHINFO_EXTENSION));
+      if (!in_array($ext, ['jpg','jpeg','png','gif','webp'], true)) throw new Exception("শুধু JPG, JPEG, PNG, GIF, WEBP দেওয়া যাবে।");
+      if ($_FILES['image']['size'] > 3*1024*1024) throw new Exception("সর্বোচ্চ 3MB ইমেজ আপলোড করা যাবে।");
+
+      $fname = guid().'.'.$ext;
+      if (!move_uploaded_file($_FILES['image']['tmp_name'], $dirFs.$fname)) {
+        throw new Exception("ইমেজ সেভ করা যায়নি (uploads/event_images/ পারমিশন চেক করুন)।");
+      }
+      $image_url = $dirWeb.$fname;
+    }
+
+    $stmt = $conn->prepare("UPDATE JobEvents SET title=?, description=?, organizer=?, start_date=?, end_date=?, image_url=? WHERE event_id=?");
+    $stmt->bind_param("sssssss", $title, $desc, $organizer, $start_date, $end_date, $image_url, $eid);
+    $stmt->execute(); $stmt->close();
+
+    header("Location: admin.php?ok=1#events"); exit;
+
+  } catch (Throwable $e) {
+    $msg = "Update failed: ".$e->getMessage();
+    $msg_type = 'error';
+  }
+}
+
+/* Delete User */
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'delete_user') {
   try {
     $del_id = sanitize($_POST['user_id'] ?? '');
     if ($del_id === '') throw new Exception("Missing user id.");
-    if ($del_id === $user_id) throw new Exception("You cannot delete your own admin account.");
+    if ($del_id === $user_id) throw new Exception("নিজেকে ডিলিট করা যাবে না।");
 
-    // You may want to delete dependent rows or rely on ON DELETE CASCADE.
     $st = $conn->prepare("DELETE FROM Users WHERE user_id = ?");
     $st->bind_param("s", $del_id);
     $st->execute(); $st->close();
 
-    $msg = "User removed.";
-    $msg_type = 'success';
-    header("Location: admin.php?ok=1#users");
-    exit;
+    header("Location: admin.php?ok=1#users"); exit;
   } catch (Throwable $e) {
     $msg = "Delete failed: ".$e->getMessage();
     $msg_type = 'error';
   }
 }
 
-/* Handle: Delete Event */
+/* Delete Event */
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'delete_event') {
   try {
     $eid = sanitize($_POST['event_id'] ?? '');
@@ -135,10 +177,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'delet
     $st->bind_param("s", $eid);
     $st->execute(); $st->close();
 
-    $msg = "Event removed.";
-    $msg_type = 'success';
-    header("Location: admin.php?ok=1#events");
-    exit;
+    header("Location: admin.php?ok=1#events"); exit;
   } catch (Throwable $e) {
     $msg = "Delete failed: ".$e->getMessage();
     $msg_type = 'error';
@@ -156,12 +195,15 @@ try {
 /* Fetch Events */
 $events = [];
 try {
-  $q = $conn->query("SELECT event_id, title, organizer, start_date, end_date, image_url, created_at FROM JobEvents ORDER BY created_at DESC");
+  $q = $conn->query("
+    SELECT event_id, title, organizer, start_date, end_date, image_url, description
+    FROM JobEvents
+    ORDER BY start_date DESC, COALESCE(end_date, start_date) DESC, event_id DESC
+  ");
   while ($row = $q->fetch_assoc()) $events[] = $row;
   $q->close();
 } catch (Throwable $e) {}
 
-/* Profile link in header (admin can still have profile) */
 $profilePage = 'profile.php';
 ?>
 <!DOCTYPE html>
@@ -170,18 +212,15 @@ $profilePage = 'profile.php';
   <meta charset="UTF-8" />
   <title>JobGate — Admin</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-
-  <!-- We reuse the same structural classes from your other pages -->
   <link rel="stylesheet" href="admin.css" />
   <script src="https://code.iconify.design/iconify-icon/2.1.0/iconify-icon.min.js"></script>
 
   <style>
-    /* Keep structure consistent with your Profile/Home (minimal overrides) */
-
-    /* Base / Topbar */
+    /* Base / Topbar / Sidebar — structure same */
     *{box-sizing:border-box}
     body{margin:0;background:#f8fafc;color:#0f172a;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial}
     img{max-width:100%;display:block}
+    .hidden{display:none !important;}
 
     .topbar{position:sticky;top:0;z-index:20;background:#fff;border-bottom:1px solid #e5e7eb}
     .topbar-inner{display:flex;align-items:center;gap:30px;height:86px;width:min(1380px,96%);margin:0 auto;padding:0 12px}
@@ -190,7 +229,6 @@ $profilePage = 'profile.php';
     .tlink{color:#0f172a;text-decoration:none;font-weight:800}
     .avatar{width:40px;height:40px;border-radius:999px;object-fit:cover;box-shadow:0 1px 6px rgba(0,0,0,.15)}
 
-    /* Layout */
     .layout{display:grid;grid-template-columns:260px 1fr;min-height:calc(100vh - 86px)}
     .sidebar{background:#0b1d3a;color:#e2e8f0;padding:12px 14px;position:sticky;top:86px;z-index:10;display:flex;flex-direction:column;height:calc(100vh - 86px)}
     .sbtn{width:100%;display:flex;align-items:center;gap:14px;background:transparent;color:#e2e8f0;border:0;text-align:left;padding:14px 12px;border-radius:12px;cursor:pointer;font-weight:800;margin-bottom:6px;font-size:18px}
@@ -217,20 +255,29 @@ $profilePage = 'profile.php';
     .btn-danger{background:#ef4444;color:#fff}
     .btn-ghost{background:#f8fafc;border:1px solid #e2e8f0}
 
-    /* Tables */
+    /* Users table: scrollable container */
+    .table-scroll{max-height:420px; overflow:auto; border:1px solid #e2e8f0; border-radius:12px; padding:6px;}
+    .table-scroll::-webkit-scrollbar{width:8px;height:8px}
+    .table-scroll::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:8px}
+
     table{width:100%;border-collapse:separate;border-spacing:0 8px}
     th,td{text-align:left;padding:10px}
-    thead th{font-weight:900;color:#334155}
+    thead th{position:sticky;top:0;background:#fff;z-index:1;font-weight:900;color:#334155;border-bottom:1px solid #e2e8f0}
     tbody tr{background:#fff;border:1px solid #e2e8f0;border-radius:10px}
     tbody tr td:first-child{border-top-left-radius:10px;border-bottom-left-radius:10px}
     tbody tr td:last-child{border-top-right-radius:10px;border-bottom-right-radius:10px}
 
-    /* Event cards list */
+    /* Event cards */
     .events-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}
     .event-item{background:#fff;border:1px solid #e2e8f0;border-radius:12px;overflow:hidden}
     .event-img{width:100%;height:160px;object-fit:cover;display:block;background:#f1f5f9}
     .event-body{padding:12px}
     .muted{color:#64748b;font-size:13px}
+
+    /* Edit area scrollable */
+    .edit-wrap{margin-top:8px;border-top:1px dashed #e5e7eb;padding-top:8px; max-height:340px; overflow:auto; border-radius:8px; background:#f8fafc}
+    .edit-wrap::-webkit-scrollbar{width:8px}
+    .edit-wrap::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:8px}
 
     @media (max-width:900px){
       .row2{grid-template-columns:1fr}
@@ -238,26 +285,22 @@ $profilePage = 'profile.php';
       .top-actions{display:none}
     }
 
-    /* Alerts */
     .alert{padding:10px 12px;border-radius:10px;margin-bottom:12px}
     .alert-success{background:#dcfce7;color:#14532d;border:1px solid #bbf7d0}
     .alert-error{background:#fee2e2;color:#7f1d1d;border:1px solid #fecaca}
   </style>
 </head>
 <body>
-  <!-- Topbar (same structure) -->
+  <!-- Topbar -->
   <header class="topbar">
-  <div class="topbar-inner">
-    <img src="./JobGate_logo.png" alt="JobGate" class="logo" />
-    <!-- Removed Home, Profile, and Avatar -->
-    <nav class="top-actions" aria-label="Top actions">
-      <!-- Empty nav kept for structure -->
-    </nav>
-  </div>
-</header>
+    <div class="topbar-inner">
+      <img src="./JobGate_logo.png" alt="JobGate" class="logo" />
+      <nav class="top-actions" aria-label="Top actions"></nav>
+    </div>
+  </header>
 
   <div class="layout">
-    <!-- Sidebar (same look) -->
+    <!-- Sidebar -->
     <aside class="sidebar">
       <button class="sbtn active" onclick="location.href='admin.php'">
         <iconify-icon icon="mdi:view-dashboard"></iconify-icon>Admin Dashboard
@@ -329,13 +372,13 @@ $profilePage = 'profile.php';
         </form>
       </section>
 
-      <!-- Manage Users -->
+      <!-- Users (scrollable) -->
       <section id="users" class="card">
         <h2 class="section-title">Users</h2>
         <?php if (empty($users)): ?>
           <p class="muted">No users found.</p>
         <?php else: ?>
-          <div style="overflow-x:auto;">
+          <div class="table-scroll">
             <table>
               <thead>
                 <tr>
@@ -370,15 +413,15 @@ $profilePage = 'profile.php';
         <?php endif; ?>
       </section>
 
-      <!-- Manage Events -->
+      <!-- Events -->
       <section id="events" class="card">
         <h2 class="section-title">Events</h2>
         <?php if (empty($events)): ?>
           <p class="muted">No events posted yet.</p>
         <?php else: ?>
           <div class="events-list">
-            <?php foreach ($events as $ev): ?>
-              <article class="event-item">
+            <?php foreach ($events as $ev): $eid = htmlspecialchars($ev['event_id']); ?>
+              <article class="event-item" id="card-<?php echo $eid; ?>">
                 <?php if (!empty($ev['image_url'])): ?>
                   <img class="event-img" src="<?php echo htmlspecialchars($ev['image_url']); ?>" alt="Event Image" onerror="this.style.display='none';" />
                 <?php else: ?>
@@ -397,13 +440,60 @@ $profilePage = 'profile.php';
                       echo ($sd && $ed) ? " to {$ed}" : ($ed ? "Until {$ed}" : "");
                     ?>
                   </div>
-                  <form method="POST" action="admin.php#events" onsubmit="return confirm('Delete this event?');">
+
+                  <!-- Edit toggle (only open on click; close others) -->
+                  <button class="btn btn-ghost" type="button" onclick="toggleEdit('edit-<?php echo $eid; ?>')">
+                    <iconify-icon icon="mdi:pencil-outline"></iconify-icon> Edit
+                  </button>
+
+                  <!-- Delete -->
+                  <form method="POST" action="admin.php#events" onsubmit="return confirm('Delete this event?');" style="display:inline;">
                     <input type="hidden" name="action" value="delete_event" />
-                    <input type="hidden" name="event_id" value="<?php echo htmlspecialchars($ev['event_id']); ?>" />
+                    <input type="hidden" name="event_id" value="<?php echo $eid; ?>" />
                     <button type="submit" class="btn btn-ghost">
                       <iconify-icon icon="mdi:delete-outline"></iconify-icon> Delete
                     </button>
                   </form>
+
+                  <!-- Inline edit form (scrollable) -->
+                  <div id="edit-<?php echo $eid; ?>" class="edit-wrap hidden">
+                    <form method="POST" action="admin.php#events" enctype="multipart/form-data">
+                      <input type="hidden" name="action" value="edit_event" />
+                      <input type="hidden" name="event_id" value="<?php echo $eid; ?>" />
+                      <div class="form-group">
+                        <label>Title *</label>
+                        <input type="text" name="title" required value="<?php echo htmlspecialchars($ev['title']); ?>" />
+                      </div>
+                      <div class="row2">
+                        <div class="form-group">
+                          <label>Organizer</label>
+                          <input type="text" name="organizer" value="<?php echo htmlspecialchars($ev['organizer'] ?? ''); ?>" />
+                        </div>
+                        <div class="form-group">
+                          <label>Start Date *</label>
+                          <input type="date" name="start_date" required value="<?php echo htmlspecialchars($ev['start_date']); ?>" />
+                        </div>
+                      </div>
+                      <div class="row2">
+                        <div class="form-group">
+                          <label>End Date</label>
+                          <input type="date" name="end_date" value="<?php echo htmlspecialchars($ev['end_date'] ?? ''); ?>" />
+                        </div>
+                        <div class="form-group">
+                          <label>Change Poster (optional)</label>
+                          <input type="file" name="image" accept="image/*" />
+                        </div>
+                      </div>
+                      <div class="form-group">
+                        <label>Description *</label>
+                        <textarea name="description" required><?php echo htmlspecialchars($ev['description']); ?></textarea>
+                      </div>
+                      <button class="btn btn-primary" type="submit">
+                        <iconify-icon icon="mdi:content-save-outline"></iconify-icon> Save
+                      </button>
+                      <button class="btn btn-ghost" type="button" onclick="toggleEdit('edit-<?php echo $eid; ?>', true)">Cancel</button>
+                    </form>
+                  </div>
                 </div>
               </article>
             <?php endforeach; ?>
@@ -412,5 +502,21 @@ $profilePage = 'profile.php';
       </section>
     </main>
   </div>
+
+  <script>
+    // একসাথে একটাই এডিট ফর্ম খোলা থাকবে; খুললে সেটার দিকে স্ক্রল করবে
+    function toggleEdit(id, closeOnly){
+      // close all others
+      document.querySelectorAll('.edit-wrap').forEach(el => el.classList.add('hidden'));
+      const el = document.getElementById(id);
+      if (!el) return;
+      if (closeOnly) { el.classList.add('hidden'); return; }
+      el.classList.remove('hidden');
+      // scroll the card into view nicely
+      el.closest('.event-item').scrollIntoView({behavior: 'smooth', block: 'center'});
+    }
+    // default: সব এডিট ফর্ম হাইড
+    document.querySelectorAll('.edit-wrap').forEach(el => el.classList.add('hidden'));
+  </script>
 </body>
 </html>
