@@ -2,29 +2,49 @@
 session_start();
 require_once 'db_connect.php';
 
-// Redirect if not logged in
-if (!is_logged_in()) {
-    redirect('login.php');
-}
+if (!is_logged_in()) { redirect('login.php'); }
 
 $user_id   = $_SESSION['user_id'];
 $user_type = $_SESSION['user_type'] ?? 'applicant';
 $full_name = $_SESSION['full_name'] ?? 'Your Name';
 $profilePage = ($user_type === 'recruiter') ? 'recruiter_profile.php' : 'profile.php';
 
-// Load avatar
-$profile_photo_url = null;
+/* Avatar */
+$avatarSrc = './avatar_placeholder.jpg';
 try {
   $stmt = $conn->prepare("SELECT profile_photo_url FROM Users WHERE user_id = ? LIMIT 1");
   $stmt->bind_param("s", $user_id);
   $stmt->execute();
   $row = $stmt->get_result()->fetch_assoc();
   $stmt->close();
-  if ($row && !empty($row['profile_photo_url'])) {
-      $profile_photo_url = $row['profile_photo_url'];
-  }
-} catch (Throwable $e) { }
-$avatarSrc = $profile_photo_url ?: './avatar_placeholder.jpg';
+  if (!empty($row['profile_photo_url'])) $avatarSrc = $row['profile_photo_url'];
+} catch (Throwable $e) {}
+
+/* Helper: excerpt */
+function excerpt($text, $len = 180){
+  $text = strip_tags($text ?? '');
+  if (mb_strlen($text) <= $len) return $text;
+  return mb_substr($text, 0, $len-1).'…';
+}
+
+/* Fetch events (no created_at dependency) */
+$events = [];
+$events_error = '';
+try {
+  $sql = "
+    SELECT event_id, title, description, organizer, start_date, end_date, image_url
+    FROM JobEvents
+    ORDER BY 
+      CASE WHEN start_date IS NULL THEN 1 ELSE 0 END,
+      start_date DESC,
+      event_id DESC
+  ";
+  $q = $conn->query($sql);
+  while ($r = $q->fetch_assoc()) $events[] = $r;
+  $q->close();
+} catch (Throwable $e) {
+  $events_error = 'DB error: '.$e->getMessage();
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -36,7 +56,7 @@ $avatarSrc = $profile_photo_url ?: './avatar_placeholder.jpg';
   <script src="https://code.iconify.design/iconify-icon/2.1.0/iconify-icon.min.js"></script>
 </head>
 <body>
-  <!-- ✅ Navbar identical to home.php/profile.php -->
+  <!-- Topbar (same as অন্যান্য পেজ) -->
   <header class="topbar">
     <div class="topbar-inner">
       <img src="./JobGate_logo.png" alt="JobGate" class="logo" />
@@ -49,7 +69,7 @@ $avatarSrc = $profile_photo_url ?: './avatar_placeholder.jpg';
   </header>
 
   <div class="layout">
-    <!-- ✅ Sidebar identical to other pages -->
+    <!-- Sidebar (unchanged) -->
     <aside class="sidebar">
       <button class="sbtn" onclick="window.location.href='home.php'">
         <iconify-icon icon="mdi:home" class="sib"></iconify-icon>Feed
@@ -86,100 +106,52 @@ $avatarSrc = $profile_photo_url ?: './avatar_placeholder.jpg';
       </a>
     </aside>
 
-    <!-- ✅ Main content -->
+    <!-- Main -->
     <main class="content">
       <header class="events-header">
-        <h1 class="page-title">Events</h1>
-        <div class="controls-wrapper">
-          <button class="btn btn-primary">
-            <iconify-icon icon="mdi:check-decagram-outline"></iconify-icon>
-            Check Event
-          </button>
-          <div class="filter-group">
-            <button class="filter-btn">All</button>
-            <button class="filter-btn active">Job Fair</button>
-            <button class="filter-btn">Internship Fair</button>
-          </div>
-        </div>
+        <h1 class="page-title">Latest Events</h1>
       </header>
 
-      <div class="events-grid">
-        <article class="event-card">
-          <div class="event-body text-only">
-            <h3 class="event-title">
-              Yakima Development Association Job Fair 2025
-            </h3>
-            <p class="event-meta">
-              <strong>Event Title:</strong> Development Association Job Fair 2025<br />
-              <strong>Date:</strong> July 1–3, 2025<br />
-              <strong>Organizer:</strong> Yakima Country<br />
-              <strong>Description:</strong> Development Association Job Fair 2025 brings together top
-              companies, recruiters, and career coaches under one roof. This
-              three-day event is your opportunity to meet industry leaders,
-              interview on the spot, and receive personalized career
-              development advice.
-            </p>
-            <a href="#" class="view-details">View Details</a>
-          </div>
-        </article>
+      <?php if ($events_error): ?>
+        <div class="alert alert-error"><?php echo htmlspecialchars($events_error); ?></div>
+      <?php endif; ?>
 
-        <article class="event-card">
-          <img
-            src="https://i.imgur.com/uU59s6S.png"
-            alt="Coders Combat 4.0"
-            class="event-image"
-          />
-          <div class="event-body">
-            <h3 class="event-title">UIU CODERS COMBAT 4.0</h3>
-            <p class="event-desc">
-              Remember how we mentioned about Coders Combat happening every
-              time we stepped into your DMs? Guess what! It's finally here.
-              And this time — it's bigger, better, and more exciting than ever
-              before! Teaming up with Shikhbe Shobai as our Technology &
-              Knowledge partner, UIU Computer Club brings Coders Combat 4.0,
-              an event to challenge your problem-solving skills, apply your
-              love for coding, and prepare for ICPC and the upcoming NCPC.
-            </p>
-            <a href="#" class="view-details">View Details</a>
-          </div>
-        </article>
-
-        <article class="event-card">
-          <img
-            src="https://i.imgur.com/gK52BLe.png"
-            alt="IEEE PES Day"
-            class="event-image"
-          />
-          <div class="event-body">
-            <h3 class="event-title">IEEE PES DAY 2025</h3>
-            <p class="event-desc">
-              Join us for IEEE PES Day 2025 at UIU! The IEEE UIU Student
-              Branch is proud to host a celebration of innovation,
-              sustainability, and the future of energy.<br />
-              <strong>Theme:</strong> "Clean Energy, Smarter Grids, Better Lives"
-            </p>
-            <a href="#" class="view-details">View Details</a>
-          </div>
-        </article>
-
-        <article class="event-card">
-          <img
-            src="https://i.imgur.com/tYt3LpS.png"
-            alt="Online Job Fair"
-            class="event-image"
-          />
-          <div class="event-body">
-            <h3 class="event-title">Campo Wave 2025</h3>
-            <p class="event-desc">
-              We are offering an exciting Job Fair to be held on December 10–20,
-              bringing together top companies and talented job seekers. This
-              event features on-spot interviews, career counseling, and
-              networking opportunities for all participants.
-            </p>
-            <a href="#" class="view-details">View Details</a>
-          </div>
-        </article>
-      </div>
+      <?php if (empty($events)): ?>
+        <p class="muted">No events posted yet.</p>
+      <?php else: ?>
+        <section class="events-grid">
+          <?php foreach ($events as $ev): 
+            $eid   = htmlspecialchars($ev['event_id']);
+            $title = htmlspecialchars($ev['title']);
+            $org   = htmlspecialchars($ev['organizer'] ?? '');
+            $img   = htmlspecialchars($ev['image_url'] ?: '');
+            $sd    = !empty($ev['start_date']) ? date('M d, Y', strtotime($ev['start_date'])) : '';
+            $ed    = !empty($ev['end_date'])   ? date('M d, Y', strtotime($ev['end_date']))   : '';
+            $desc  = htmlspecialchars(excerpt($ev['description'] ?? '', 220));
+          ?>
+          <article class="event-card">
+            <div class="poster">
+              <?php if ($img): ?>
+                <img src="<?php echo $img; ?>" alt="<?php echo $title; ?>" onerror="this.style.display='none';" />
+              <?php else: ?>
+                <div class="poster-empty">No image</div>
+              <?php endif; ?>
+            </div>
+            <div class="event-info">
+              <h3 class="event-title"><?php echo $title; ?></h3>
+              <div class="event-meta">
+                <?php if ($sd): ?><span>Date: <?php echo $sd; ?><?php echo $ed ? ' — '.$ed : ''; ?></span><?php endif; ?>
+                <?php if ($org): ?> · <span>Organizer: <?php echo $org; ?></span><?php endif; ?>
+              </div>
+              <p class="event-desc"><?php echo $desc; ?></p>
+              <a class="btn view-btn" href="job_event_details.php?eventId=<?php echo $eid; ?>">
+                <iconify-icon icon="mdi:eye-outline"></iconify-icon> View
+              </a>
+            </div>
+          </article>
+          <?php endforeach; ?>
+        </section>
+      <?php endif; ?>
     </main>
   </div>
 </body>
