@@ -1,128 +1,134 @@
+<?php
+// course_note.php — show single course + basic tracking actions
+session_start();
+require_once 'db_connect.php';
+if (!is_logged_in()) { redirect('login.php'); }
+
+$user_id  = $_SESSION['user_id'] ?? '';
+$courseId = $_GET['courseId'] ?? '';
+
+if ($courseId === '') { redirect('courses.php'); }
+
+/* load course */
+$course = null;
+try {
+  $st = $conn->prepare("SELECT course_id, cat, cat_title, title, subtitle, blurb, banner_url, note_url, created_at
+                        FROM Courses WHERE course_id = ? LIMIT 1");
+  $st->bind_param("s", $courseId);
+  $st->execute();
+  $course = $st->get_result()->fetch_assoc();
+  $st->close();
+  if (!$course) { redirect('courses.php'); }
+} catch (Throwable $e) { redirect('courses.php'); }
+
+/* ensure a tracking row exists for this user+course (not_started) */
+try {
+  $st = $conn->prepare("INSERT IGNORE INTO CourseTracking (user_id, course_id, status, progress_percent, started_at)
+                        VALUES (?, ?, 'not_started', 0, NOW())");
+  $st->bind_param("ss", $user_id, $courseId);
+  $st->execute();
+  $st->close();
+} catch (Throwable $e) {}
+
+/* handle status updates */
+$msg = '';
+if ($_SERVER['REQUEST_METHOD']==='POST') {
+  $action = $_POST['action'] ?? '';
+  try {
+    if ($action === 'start') {
+      $st = $conn->prepare("UPDATE CourseTracking SET status='in_progress', progress_percent=GREATEST(progress_percent,10), started_at=IFNULL(started_at,NOW()) WHERE user_id=? AND course_id=?");
+      $st->bind_param("ss", $user_id, $courseId);
+      $st->execute(); $st->close();
+      $msg = 'Marked as In Progress';
+    } else if ($action === 'complete') {
+      $st = $conn->prepare("UPDATE CourseTracking SET status='completed', progress_percent=100 WHERE user_id=? AND course_id=?");
+      $st->bind_param("ss", $user_id, $courseId);
+      $st->execute(); $st->close();
+      $msg = 'Marked as Completed';
+    } else if ($action === 'set_progress') {
+      $p = max(0, min(100, (int)($_POST['progress'] ?? 0)));
+      $st = $conn->prepare("UPDATE CourseTracking SET status=IF(?=100,'completed','in_progress'), progress_percent=? WHERE user_id=? AND course_id=?");
+      $st->bind_param("iiss", $p, $p, $user_id, $courseId);
+      $st->execute(); $st->close();
+      $msg = 'Progress updated';
+    }
+  } catch (Throwable $e) {
+    $msg = 'Update failed: '.$e->getMessage();
+  }
+}
+
+/* read tracking row */
+$track = ['status'=>'not_started','progress_percent'=>0,'updated_at'=>null];
+try {
+  $st = $conn->prepare("SELECT status, progress_percent, updated_at FROM CourseTracking WHERE user_id=? AND course_id=? LIMIT 1");
+  $st->bind_param("ss", $user_id, $courseId);
+  $st->execute();
+  $track = $st->get_result()->fetch_assoc() ?: $track;
+  $st->close();
+} catch (Throwable $e) {}
+
+function h($s){ return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
+?>
 <!DOCTYPE html>
-<html lang="bn">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>JobGate — Course Note</title>
-    <link rel="stylesheet" href="course_note.css" />
-    <script src="https://code.iconify.design/iconify-icon/2.1.0/iconify-icon.min.js"></script>
-  </head>
-  <body>
-    <!-- Top bar -->
-    <header class="topbar">
-      <div class="topbar-inner">
-        <img src="./JobGate_logo.png" alt="JobGate" class="logo" />
-        <!-- <div class="search-wrap">
-          <iconify-icon icon="mdi:magnify"></iconify-icon>
-          <input type="text" placeholder="Search JobGate" />
-        </div> -->
-        <nav class="top-actions">
-          <a href="home.php" class="tlink">Home</a>
-          <a href="profile.php" class="tlink">Profile</a>
-          <img src="./avatar_placeholder.jpg" class="avatar" />
-        </nav>
-      </div>
-    </header>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title><?php echo h($course['title']); ?> — Course Note</title>
+  <link rel="stylesheet" href="courses.css"/>
+  <style>
+    .wrap{width:min(1100px,96%);margin:0 auto;padding:24px 28px 48px}
+    .back{display:inline-grid;place-items:center;width:44px;height:44px;background:#e8efff;color:#1e40af;border-radius:10px;text-decoration:none;font-size:22px;margin-bottom:10px}
+    .details{background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:14px;box-shadow:0 16px 34px rgba(2,6,23,.08);padding:20px 22px}
+    .head{display:flex;gap:16px;align-items:center}
+    .thumb{width:120px;height:120px;border-radius:12px;background:#f1f5f9;object-fit:cover}
+    .meta{display:flex;gap:14px;color:#475569;font-weight:800;margin:8px 0 12px}
+    .msg{margin:10px 0;padding:10px 12px;border-radius:10px;background:#e0f2fe;color:#075985}
+    .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:8px}
+    .btn{border:0;border-radius:10px;padding:10px 14px;font-weight:900;cursor:pointer}
+    .primary{background:#3b82f6;color:#fff}
+    .ghost{background:#e5e7eb;color:#0f172a}
+    input[type=number]{padding:8px 10px;border-radius:10px;border:1px solid #cbd5e1;width:90px}
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <img src="./JobGate_logo.png" alt="JobGate" class="logo"/>
+      <nav class="top-actions"><a href="courses.php" class="tlink">Courses</a></nav>
+    </div>
+  </header>
 
-    <main class="wrap">
-      <div class="topline">
-        <a
-          class="back"
-          href="courses.php"
-          onclick="if(history.length>1){history.back();return false;}"
-        >
-          <iconify-icon icon="mdi:arrow-left"></iconify-icon>
-        </a>
-        <h1 class="page-title">Skill Up with Courses</h1>
-      </div>
+  <main class="wrap">
+    <a class="back" href="courses.php" onclick="if(history.length>1){history.back();return false;}">&#8592;</a>
 
-      <section class="note-card">
-        <header class="note-head">
-          <h2 id="cTitle">Course Title</h2>
-          <a id="cSubtitle" href="#">Subtitle</a>
-        </header>
+    <section class="details">
+      <?php if (!empty($msg)): ?><div class="msg"><?php echo h($msg); ?></div><?php endif; ?>
 
-        <article id="noteBody" class="note-body"></article>
-
-        <div class="cta-row">
-          <button class="btn-done" id="btnDone">Done</button>
+      <div class="head">
+        <img class="thumb" src="<?php echo h($course['banner_url'] ?: './course_banner.jpg'); ?>" alt="" onerror="this.src='./course_banner.jpg'"/>
+        <div>
+          <h2 style="margin:0;font-size:24px;font-weight:900;"><?php echo h($course['title']); ?></h2>
+          <div class="meta">
+            <span><?php echo h($course['cat_title'] ?: $course['cat']); ?></span>
+            <?php if(!empty($course['subtitle'])): ?><span>• <?php echo h($course['subtitle']); ?></span><?php endif; ?>
+          </div>
+          <div style="color:#0f172a;"><?php echo nl2br(h($course['blurb'] ?: '')); ?></div>
         </div>
-      </section>
-    </main>
-    <a href=""></a>
-    <script>
-      const id = new URLSearchParams(location.search).get("courseId");
+      </div>
 
-      const NOTES = {
-        c1: {
-          title: "AI and ML",
-          subtitle: "Natural Language Processing",
-          html: `
-            <p>Learn how machines process language using AI & ML.</p>
-            <h3>Topics</h3>
-            <ol>
-              <li><a href="https://www.youtube.com/watch?v=CMrHM8a3hqw"> What is the NPL and How Does it work</a> </li>
-              <li><a href="https://www.youtube.com/watch?v=G6wdZQw4d8Y">Natural Language full course</a></li>
-              <li> <a href="https://web.stanford.edu/~jurafsky/slp3/?utm_source=chatgpt.com">An Introduction to Natural Language Processing</a></li>
-              <li><a href="https://tjzhifei.github.io/resources/NLTK.pdf?utm_source=chatgpt.com">Natural Language Processing with Python</a></li>
-            </ol>
-          `,
-        },
-        c2: {
-          title: "AI and ML",
-          subtitle: "Deep Learning Fundamentals",
-          html: `<p>Deep Learning core concepts with examples.</p>
-          <ol>
-              <li><a href="youtube.com/watch?v=VyWAvY2CF9c&utm_source=chatgpt.com">Introduction to Deep Learning (6.S191)</a> </li>
-        
-              <li> <a href="https://d2l.ai/d2l-en.pdf?utm_source=chatgpt.com">Dive into Deep Learning</a></li>
-              
-            </ol>
-          `,
-        },
-        c3: {
-          title: "Software Testing",
-          subtitle: "SDLC",
-          html: `<p>Overview of Software Development Life Cycle in Testing.</p>
-          <ol>
-              <li><a href="https://www.youtube.com/watch?v=sTLZDNQq5C4">Software Testing phase</a> </li>
-              <li><a href="https://www.accelq.com/wp-content/uploads/2023/05/A-Complete-Guide-To-Software-Testing-Life-Cycle-3-1.pdf?utm_source=chatgpt.com">Complete Guide to Software Testing Life Cycle </a> </li>
-              <li> <a href="https://dahlan.unimal.ac.id/files/ebooks/2007%20%5BMcLeod_R.%5D_Software_Testing_Testing_Across_the_E.pdf?utm_source=chatgpt.com">Testing Accross in SDLC</a></li>
-              
-            </ol>
-          `,
-        },
-        c4: {
-          title: "Software Testing",
-          subtitle: "Test Automation",
-          html: `<p>Automation frameworks, tools, and CI/CD integration.</p>
-          <ol>
-              <li><a href="https://exactpro.com/sites/default/files/attachments/test_automation_principles.pdf?utm_source=chatgpt.com">Automation Test Principels</a> </li>
-              <li><a href="https://www.youtube.com/watch?v=-WnTkcq_By0">How to learn Automation Test in present </a> </li>
-              <li> <a href="https://www.youtube.com/watch?v=HmQv8Z4om4I&utm_source=chatgpt.com">Learn Automation Test</a></li>
-              
-            </ol>
-          `,
-        },
-      };
+      <hr style="border:none;border-top:1px solid #e2e8f0;margin:16px 0">
 
-      const data = NOTES[id] || {
-        title: "Unknown",
-        subtitle: "—",
-        html: "<p>No details available</p>",
-      };
+      <div><strong>Status:</strong> <?php echo h($track['status']); ?>, <strong>Progress:</strong> <?php echo (int)$track['progress_percent']; ?>%</div>
 
-      document.getElementById("cTitle").textContent = data.title;
-      document.getElementById("cSubtitle").textContent = data.subtitle;
-      document.getElementById("noteBody").innerHTML = data.html;
-
-      document.getElementById("btnDone").addEventListener("click", () => {
-        if (window.opener) {
-          window.close();
-        } else {
-          location.href = "courses.html";
-        }
-      });
-    </script>
-  </body>
+      <form method="post" class="row">
+        <button class="btn primary" name="action" value="start" type="submit">Mark In Progress</button>
+        <button class="btn ghost"  name="action" value="complete" type="submit">Mark Completed</button>
+        <span>Set progress</span>
+        <input type="number" name="progress" min="0" max="100" value="<?php echo (int)$track['progress_percent']; ?>">
+        <button class="btn ghost" name="action" value="set_progress" type="submit">Update</button>
+      </form>
+    </section>
+  </main>
+</body>
 </html>
