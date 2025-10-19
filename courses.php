@@ -8,6 +8,14 @@ if (!isset($_SESSION['user_id'])) {
   exit;
 }
 
+// ✅ Logout functionality
+if (isset($_GET['logout'])) {
+  session_unset();
+  session_destroy();
+  header("Location: login.php");
+  exit;
+}
+
 $user_id = $_SESSION['user_id'];
 
 // 👤 Fetch user's avatar
@@ -109,7 +117,8 @@ try {
         <iconify-icon icon="mdi:briefcase-outline"></iconify-icon>Jobs
       </button>
       <div class="spacer"></div>
-      <button class="sbtn logout" onclick="window.location.href='login.php'">
+      <!-- ✅ Fixed logout -->
+      <button class="sbtn logout" onclick="window.location.href='courses.php?logout=1'">
         <iconify-icon icon="mdi:logout"></iconify-icon>Log out
       </button>
     </aside>
