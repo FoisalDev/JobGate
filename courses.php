@@ -12,13 +12,13 @@
     <header class="topbar">
       <div class="topbar-inner">
         <img src="./JobGate_logo.png" alt="JobGate" class="logo" />
-        <div class="search-wrap" role="search">
+        <!-- <div class="search-wrap" role="search">
           <iconify-icon icon="mdi:magnify" class="sicon"></iconify-icon>
           <input id="globalSearch" type="text" placeholder="Search JobGate" />
-        </div>
+        </div> -->
         <nav class="top-actions">
-          <a href="home.html" class="tlink">Home</a>
-          <a href="profile.html" class="tlink">Profile</a>
+          <a href="home.php" class="tlink">Home</a>
+          <a href="profile.php" class="tlink">Profile</a>
           <img src="./avatar_placeholder.jpg" class="avatar" />
         </nav>
       </div>
@@ -27,14 +27,14 @@
     <div class="layout">
       <!-- Sidebar -->
       <aside class="sidebar">
-        <button class="sbtn" onclick="window.location.href='home.html'">
+        <button class="sbtn" onclick="window.location.href='home.php'">
           <iconify-icon icon="mdi:home"></iconify-icon>Feed
         </button>
-        <button class="sbtn" onclick="window.location.href='career_tips.html'">
+        <button class="sbtn" onclick="window.location.href='career_tips.php'">
           <iconify-icon icon="mdi:lightbulb-on-outline"></iconify-icon>Career
           Tips
         </button>
-        <button class="sbtn" onclick="window.location.href='job_events.html'">
+        <button class="sbtn" onclick="window.location.href='job_events.php'">
           <iconify-icon icon="mdi:calendar-star"></iconify-icon>Job Events
         </button>
         <button class="sbtn active">
@@ -47,18 +47,18 @@
           <iconify-icon icon="mdi:account-check-outline"></iconify-icon>Skill
           Assessment
         </button>
-        <button class="sbtn" onclick="window.location.href='jobs.html'">
+        <button class="sbtn" onclick="window.location.href='jobs.php'">
           <iconify-icon icon="mdi:briefcase-outline"></iconify-icon>Jobs
         </button>
         <div class="spacer"></div>
-        <button class="sbtn logout" onclick="window.location.href='login.html'">
+        <button class="sbtn logout" onclick="window.location.href='login.php'">
           <iconify-icon icon="mdi:logout"></iconify-icon>Log out
         </button>
       </aside>
 
       <!-- Main -->
-      <main class="content">
-        <h1 class="page-title">Skill Up with Courses</h1>
+      <main class="content" style="margin-left: 20px;">
+        <h1 class="page-title">  Skill Up with Courses</h1>
 
         <!-- Controls -->
         <div class="controls">
@@ -78,14 +78,14 @@
             <option value="programming">Programming</option>
           </select>
 
-          <a
+          <!-- <a
             href="#"
             class="btn-primary"
             onclick="alert('Hook to Create Note'); return false;"
           >
             <iconify-icon icon="mdi:plus-circle"></iconify-icon>
             Create Note
-          </a>
+          </a> -->
         </div>
 
         <!-- Sections -->
@@ -103,7 +103,7 @@
           title: "AI and ML",
           subtitle: "Natural Language Processing",
           blurb: "This course covers techniques and tools used in NLP.",
-          noteUrl: "course_note.html?courseId=c1",
+          noteUrl: "course_note.php?courseId=c1",
         },
         {
           id: "c2",
@@ -112,7 +112,7 @@
           title: "AI and ML",
           subtitle: "Deep Learning Fundamentals",
           blurb: "Comprehensive overview of deep learning and neural nets.",
-          noteUrl: "course_note.html?courseId=c2",
+          noteUrl: "course_note.php?courseId=c2",
         },
         {
           id: "c3",
@@ -121,7 +121,7 @@
           title: "Software Testing",
           subtitle: "SDLC",
           blurb: "Covers the entire Software Development Life Cycle.",
-          noteUrl: "course_note.html?courseId=c3",
+          noteUrl: "course_note.php?courseId=c3",
         },
         {
           id: "c4",
@@ -130,7 +130,7 @@
           title: "Software Testing",
           subtitle: "Test Automation",
           blurb: "Dive into test automation techniques, tools, and frameworks.",
-          noteUrl: "course_note.html?courseId=c4",
+          noteUrl: "course_note.php?courseId=c4",
         },
       ];
 
